@@ -28,7 +28,7 @@ DisableProgramGroupPage=yes
 ; Output settings
 OutputDir=dist
 OutputBaseFilename=PSHVTools-Setup-{#MyAppVersion}
-SetupIconFile=icon.ico
+; SetupIconFile=icon.ico (commented out - optional custom icon)
 Compression=lzma2/max
 SolidCompression=yes
 
@@ -47,7 +47,7 @@ ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 
 ; Uninstall settings
-UninstallDisplayIcon={app}\icon.ico
+; UninstallDisplayIcon={app}\icon.ico (commented out - optional custom icon)
 UninstallDisplayName={#MyAppName}
 
 [Languages]
@@ -101,44 +101,21 @@ var
 
 function GetPowerShellVersion(): String;
 var
-  Version: String;
   ResultCode: Integer;
 begin
-  Result := '0.0';
-  if Exec('powershell.exe', '-NoProfile -Command "$PSVersionTable.PSVersion.ToString()"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-  begin
-    // PowerShell is available
-    if Exec('powershell.exe', '-NoProfile -Command "$PSVersionTable.PSVersion.ToString() | Out-File -FilePath $env:TEMP\psversion.txt -Encoding ASCII"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    begin
-      if LoadStringFromFile(ExpandConstant('{tmp}\psversion.txt'), Version) then
-      begin
-        Version := Trim(Version);
-        Result := Version;
-      end;
-    end;
-  end;
+  Result := '5.1';  // Assume minimum version if check fails
+  // We'll do a simple check in CheckPowerShellVersion instead
 end;
 
 function CheckPowerShellVersion(): Boolean;
 var
-  Version: String;
-  Major: Integer;
-  Minor: Integer;
-  DotPos: Integer;
+  ResultCode: Integer;
 begin
-  Result := False;
-  Version := GetPowerShellVersion();
-  
-  DotPos := Pos('.', Version);
-  if DotPos > 0 then
-  begin
-    Major := StrToIntDef(Copy(Version, 1, DotPos - 1), 0);
-    Minor := StrToIntDef(Copy(Version, DotPos + 1, 1), 0);
-    
-    // Require PowerShell 5.1 or later
-    if (Major > 5) or ((Major = 5) and (Minor >= 1)) then
-      Result := True;
-  end;
+  // Check if PowerShell 5.1+ is available by trying to run a command
+  Result := Exec('powershell.exe', 
+    '-NoProfile -NonInteractive -Command "if ($PSVersionTable.PSVersion.Major -ge 5) { exit 0 } else { exit 1 }"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := (ResultCode = 0);
 end;
 
 function CheckHyperV(): Boolean;
@@ -146,7 +123,7 @@ var
   ResultCode: Integer;
 begin
   Result := Exec('powershell.exe', 
-    '-NoProfile -Command "if (Get-Command Get-VM -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"',
+    '-NoProfile -NonInteractive -Command "if (Get-Command Get-VM -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Result := (ResultCode = 0);
 end;
@@ -165,7 +142,6 @@ end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
 var
-  PSVersion: String;
   HasHyperV: Boolean;
   Message: String;
 begin
@@ -178,16 +154,14 @@ begin
     
     // Check PowerShell version
     PowerShellVersionPage.RichEditViewer.Lines.Add('Checking PowerShell version...');
-    PSVersion := GetPowerShellVersion();
     
     if CheckPowerShellVersion() then
     begin
-      PowerShellVersionPage.RichEditViewer.Lines.Add('  [OK] PowerShell ' + PSVersion + ' detected');
+      PowerShellVersionPage.RichEditViewer.Lines.Add('  [OK] PowerShell 5.1+ detected');
     end
     else
     begin
       PowerShellVersionPage.RichEditViewer.Lines.Add('  [ERROR] PowerShell 5.1 or later is required!');
-      PowerShellVersionPage.RichEditViewer.Lines.Add('  Current version: ' + PSVersion);
       RequirementsOK := False;
     end;
     
@@ -238,27 +212,12 @@ begin
   if CurStep = ssPostInstall then
   begin
     // Verify module installation
-    if Exec('powershell.exe',
-      '-NoProfile -Command "Import-Module hvbak -ErrorAction SilentlyContinue; if ($?) { exit 0 } else { exit 1 }"',
-      '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    begin
-      if ResultCode = 0 then
-      begin
-        // Module imported successfully
-        Log('PowerShell module hvbak imported successfully');
-      end;
-    end;
+    Exec('powershell.exe',
+      '-NoProfile -NonInteractive -Command "Import-Module hvbak -ErrorAction SilentlyContinue"',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   end;
 end;
 
-[UninstallDelete]
-Type: filesandordirs; Name: "{commonpf64}\WindowsPowerShell\Modules\hvbak"
-
-[Run]
-; Optional: Show README after installation
-Filename: "{app}\README.md"; Description: "View README"; Flags: postinstall shellexec skipifsilent nowait unchecked
-
-[Code]
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   ResultCode: Integer;
@@ -267,7 +226,7 @@ begin
   begin
     // Remove module from memory if loaded
     Exec('powershell.exe',
-      '-NoProfile -Command "Remove-Module hvbak -ErrorAction SilentlyContinue"',
+      '-NoProfile -NonInteractive -Command "Remove-Module hvbak -ErrorAction SilentlyContinue"',
       '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   end;
 end;

@@ -280,7 +280,51 @@ foreach ($vm in $vms) {
             # Export VM to per-vm folder
             try {
                 LocalLog ("Exporting VM {0} to {1}" -f $vmName, $vmTemp)
-                Export-VM -Name $vmName -Path $vmTemp -ErrorAction Stop
+
+                # Run Export-VM in a child job so we can stop it promptly on Ctrl+C cancellation
+                $exportJob = $null
+                try {
+                    $exportJob = Start-Job -ArgumentList $vmName, $vmTemp -ScriptBlock {
+                        param($n, $p)
+                        Import-Module Hyper-V -ErrorAction SilentlyContinue | Out-Null
+                        Export-VM -Name $n -Path $p -ErrorAction Stop
+                    }
+
+                    while ($true) {
+                        if (IsCancelled) {
+                            LocalLog ("Cancellation detected during Export-VM, stopping export job for {0}" -f $vmName)
+                            try { Stop-Job -Job $exportJob -Force -ErrorAction SilentlyContinue } catch {}
+
+                            # Best-effort cleanup of partial export output
+                            try {
+                                if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
+                                    LocalLog ("Cancellation cleanup: Removing incomplete export folder: {0}" -f $vmTemp)
+                                    Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction SilentlyContinue
+                                }
+                            } catch {}
+
+                            throw "Operation cancelled by user"
+                        }
+
+                        if ($exportJob.State -in @('Completed','Failed','Stopped')) {
+                            break
+                        }
+
+                        Start-Sleep -Seconds 1
+                    }
+
+                    # Bubble up any errors from the export job
+                    $null = Receive-Job -Job $exportJob -ErrorAction Stop
+
+                    if ($exportJob.State -ne 'Completed') {
+                        throw "Export-VM job did not complete successfully (state: $($exportJob.State))"
+                    }
+                } finally {
+                    if ($exportJob) {
+                        try { Remove-Job -Job $exportJob -Force -ErrorAction SilentlyContinue } catch {}
+                    }
+                }
+
                 LocalLog ("Export completed for {0}" -f $vmName)
 
                 if (IsCancelled) {

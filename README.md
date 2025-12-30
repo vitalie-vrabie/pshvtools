@@ -2,7 +2,7 @@
 
 **Version:** 1.0.0  
 **Product Name:** PSHVTools (PowerShell Hyper-V Tools)  
-**Module Name:** vmbak  
+**Module Name:** hvbak  
 **Commands:** `hvbak` or `hv-bak`  
 **License:** MIT
 
@@ -88,9 +88,9 @@ The MSI installer will be created at: `dist\PSHVTools-Setup-1.0.0.msi`
 
 ```
 PSHVTools/
-??? vmbak.ps1                          # Core backup script
-??? vmbak.psm1                         # PowerShell module
-??? vmbak.psd1                         # Module manifest
+??? hvbak.ps1                          # Core backup script
+??? hvbak.psm1                         # PowerShell module
+??? hvbak.psd1                         # Module manifest
 ?
 ??? Build-WixInstaller.bat             # Builds MSI installer
 ??? PSHVTools-Installer.wxs            # WiX installer definition

@@ -1,4 +1,4 @@
-# vmbak.psm1
+# hvbak.psm1
 # PowerShell module for VM backup operations
 
 function Invoke-VMBackup {
@@ -74,10 +74,10 @@ function Invoke-VMBackup {
     }
 
     # Get the path to the actual script
-    $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "vmbak.ps1"
+    $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "hvbak.ps1"
     
     if (-not (Test-Path $scriptPath)) {
-        Write-Error "vmbak.ps1 not found at: $scriptPath"
+        Write-Error "hvbak.ps1 not found at: $scriptPath"
         return
     }
 
@@ -102,4 +102,3 @@ New-Alias -Name hv-bak -Value Invoke-VMBackup -Force
 
 # Export the function and aliases
 Export-ModuleMember -Function Invoke-VMBackup -Alias hvbak, hv-bak
-````````

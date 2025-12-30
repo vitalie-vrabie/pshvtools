@@ -83,25 +83,25 @@ echo Validating files...
 
 set "MISSING_FILES="
 
-if not exist "%SCRIPT_DIR%\vmbak.ps1" (
-    echo   [MISSING] vmbak.ps1
+if not exist "%SCRIPT_DIR%\hvbak.ps1" (
+    echo   [MISSING] hvbak.ps1
     set "MISSING_FILES=1"
 ) else (
-    echo   [OK] vmbak.ps1
+    echo   [OK] hvbak.ps1
 )
 
-if not exist "%SCRIPT_DIR%\vmbak.psm1" (
-    echo   [MISSING] vmbak.psm1
+if not exist "%SCRIPT_DIR%\hvbak.psm1" (
+    echo   [MISSING] hvbak.psm1
     set "MISSING_FILES=1"
 ) else (
-    echo   [OK] vmbak.psm1
+    echo   [OK] hvbak.psm1
 )
 
-if not exist "%SCRIPT_DIR%\vmbak.psd1" (
-    echo   [MISSING] vmbak.psd1
+if not exist "%SCRIPT_DIR%\hvbak.psd1" (
+    echo   [MISSING] hvbak.psd1
     set "MISSING_FILES=1"
 ) else (
-    echo   [OK] vmbak.psd1
+    echo   [OK] hvbak.psd1
 )
 
 if not exist "%SCRIPT_DIR%\QUICKSTART.md" (

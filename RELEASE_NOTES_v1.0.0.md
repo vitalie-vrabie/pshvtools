@@ -135,9 +135,9 @@ Output: `dist\PSHVTools-Setup-1.0.0.msi`
 
 ## ?? What's Included
 
-- **vmbak.ps1** - Core backup script
-- **vmbak.psm1** - PowerShell module
-- **vmbak.psd1** - Module manifest
+- **hvbak.ps1** - Core backup script
+- **hvbak.psm1** - PowerShell module
+- **hvbak.psd1** - Module manifest
 - **Documentation** - Complete user guides
 - **MSI Installer** - Professional Windows Installer package
 

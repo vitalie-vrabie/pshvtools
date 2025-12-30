@@ -56,10 +56,10 @@ After installation, verify the module is available:
 
 ```powershell
 # Check if module is loaded
-Get-Module vmbak
+Get-Module hvbak
 
 # If not loaded, import it
-Import-Module vmbak
+Import-Module hvbak
 
 # Verify the cmdlets are available
 Get-Command hvbak
@@ -113,7 +113,7 @@ The module is automatically available after installation. If you want to ensure 
 notepad $PROFILE
 
 # Add this line:
-Import-Module vmbak
+Import-Module hvbak
 
 # Save and close the file
 ```
@@ -124,10 +124,10 @@ Import-Module vmbak
 
 ```powershell
 # Verify installation
-Get-Module vmbak -ListAvailable
+Get-Module hvbak -ListAvailable
 
 # If found, import manually
-Import-Module vmbak
+Import-Module hvbak
 
 # Verify both commands are available
 Get-Command hvbak, hv-bak
@@ -140,25 +140,25 @@ Get-Command hvbak, hv-bak
 $env:PSModulePath -split ';'
 
 # Verify module files exist in:
-# C:\Program Files\WindowsPowerShell\Modules\vmbak
+# C:\Program Files\WindowsPowerShell\Modules\hvbak
 ```
 
 ### Need to refresh module after changes
 
 ```powershell
 # Remove and re-import
-Remove-Module vmbak -ErrorAction SilentlyContinue
-Import-Module vmbak -Force
+Remove-Module hvbak -ErrorAction SilentlyContinue
+Import-Module hvbak -Force
 ```
 
 ### Check module version and aliases
 
 ```powershell
 # Get module information
-Get-Module vmbak | Select-Object Name, Version, ExportedAliases
+Get-Module hvbak | Select-Object Name, Version, ExportedAliases
 
 # List all exported aliases
-(Get-Module vmbak).ExportedAliases
+(Get-Module hvbak).ExportedAliases
 ```
 
 ## Pro Tips

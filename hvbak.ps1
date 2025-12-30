@@ -580,6 +580,22 @@ foreach ($vm in $vms) {
             }
 
             LocalLog ("Cleanup phase completed for {0}" -f $vmName)
+            
+            # 4. Verify and delete temp directory if empty
+            if ($vmTemp -and (Test-Path $vmTemp)) {
+                try {
+                    $tempContents = Get-ChildItem -Path $vmTemp -Force -ErrorAction SilentlyContinue
+                    if (-not $tempContents -or $tempContents.Count -eq 0) {
+                        LocalLog ("Cleanup: Temp directory {0} is empty, deleting..." -f $vmTemp)
+                        Remove-Item -LiteralPath $vmTemp -Force -ErrorAction Stop
+                        LocalLog ("Cleanup: Successfully deleted empty temp directory: {0}" -f $vmTemp)
+                    } else {
+                        LocalLog ("Cleanup: Temp directory {0} still contains {1} items, keeping it" -f $vmTemp, $tempContents.Count)
+                    }
+                } catch {
+                    LocalLog ("Cleanup: Failed to check/delete temp directory {0}: {1}" -f $vmTemp, $_)
+                }
+            }
         }
 
         return $result

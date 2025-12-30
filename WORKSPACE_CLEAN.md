@@ -1,8 +1,8 @@
 # PSHVTools - Clean Workspace
 
-## ? Workspace Cleaned Up
+## ? Workspace Cleaned and Optimized
 
-All migration documentation and temporary files have been removed. The workspace now contains only essential files for building and using PSHVTools.
+All migration documentation, temporary files, and PowerShell installer outputs have been removed. The workspace now contains only essential files for building the GUI EXE installer.
 
 ---
 
@@ -17,7 +17,7 @@ hvbak.psd1                   # Module manifest
 
 ### Installation Scripts
 ```
-Install-PSHVTools.ps1        # PowerShell installer
+Install-PSHVTools.ps1        # PowerShell installer (for manual use)
 Uninstall-PSHVTools.ps1      # PowerShell uninstaller
 ```
 
@@ -28,17 +28,17 @@ Uninstall-PSHVTools.ps1      # PowerShell uninstaller
 PSHVTools.csproj             # MSBuild project file
 ```
 
-**Build Scripts:**
+**GUI Installer Build:**
+```
+Build-InnoSetupInstaller.bat # Build GUI EXE installer ?
+PSHVTools-Installer.iss      # Inno Setup script
+```
+
+**PowerShell Installer Build (optional):**
 ```
 Build-Release.bat            # Build PowerShell installer packages
 Build-Installer.bat          # Build PowerShell installer only
-Build-InnoSetupInstaller.bat # Build GUI EXE installer
-```
-
-**Installer Generator:**
-```
 Create-InstallerScript.ps1   # Generates PowerShell installer scripts
-PSHVTools-Installer.iss      # Inno Setup script for GUI installer
 ```
 
 ### Documentation
@@ -51,6 +51,7 @@ PROJECT_SUMMARY.md           # Project overview
 RELEASE_NOTES_v1.0.0.md      # Release notes
 README_HVBAK_MODULE.md       # Module documentation
 LICENSE.txt                  # MIT license
+WORKSPACE_CLEAN.md           # This file
 ```
 
 ### Utility Scripts
@@ -60,92 +61,71 @@ vm-fix-acl.ps1              # ACL fix utility
 
 ---
 
-## ?? Quick Build Commands
+## ?? Build Command
 
-### Build GUI EXE Installer (Recommended)
+### Build GUI EXE Installer (Primary)
 ```cmd
 Build-InnoSetupInstaller.bat
 ```
 **Output:** `dist/PSHVTools-Setup-1.0.0.exe` (1.88 MB)
 
-### Build PowerShell Installer
-```cmd
-Build-Release.bat package
-```
-**Output:** 
-- `dist/PSHVTools-Setup-1.0.0.zip` (19 KB)
-- `release/PSHVTools-v1.0.0.zip` (19 KB)
-
 ---
 
-## ?? Distribution Packages
+## ?? Distribution Package
 
 After building, you'll have:
 
-1. **GUI EXE Installer** - `dist/PSHVTools-Setup-1.0.0.exe`
-   - Professional wizard interface
-   - System requirements checking
-   - Windows integration
-
-2. **PowerShell Installer** - `dist/PSHVTools-Setup-1.0.0.zip`
-   - Lightweight (19 KB)
-   - Silent installation support
-
-3. **Source Package** - `release/PSHVTools-v1.0.0.zip`
-   - For developers
-   - Manual installation
+**GUI EXE Installer** - `dist/PSHVTools-Setup-1.0.0.exe`
+- Professional wizard interface
+- System requirements checking
+- Windows integration
+- Silent installation support
+- 1.88 MB
 
 ---
 
 ## ??? Files Removed
 
-The following temporary/migration files were removed:
-- `WIX_TO_MSBUILD_MIGRATION.md`
-- `WIX_REMOVAL_SUMMARY.md`
-- `MIGRATION_COMPLETE.md`
-- `CLEANUP_WIX_FILES.md`
-- `GUI_INSTALLER_READY.md`
-- `COMPLETE_BUILD_SYSTEM_SUMMARY.md`
-- `COMMAND_RENAME_SUMMARY.md`
-- `FILE_RENAME_SUMMARY.md`
-- `REPOSITORY_RENAME_SUMMARY.md`
-- `HVBAK_COMMAND_REGISTRATION.md`
-- `Build.ps1` (obsolete)
-- `PSHVTools.proj` (obsolete)
-- `Rename-Repository.bat` (obsolete)
+**Migration/Temporary Documentation (10 files):**
+- All WiX migration documentation
+- Rename summaries
+- Temporary build files
+
+**PowerShell Installer Outputs:**
+- `dist/PSHVTools-Setup-1.0.0.zip` - PowerShell installer ZIP
+- `dist/PSHVTools-Setup-1.0.0/` - PowerShell installer folder
+- `release/` - Entire folder removed
+
+**Result:** Only the GUI EXE installer remains in `dist/`
 
 ---
 
 ## ? Current Status
 
-**Workspace:** Clean and organized  
-**Build System:** Ready to use  
-**Installers:** Built and tested  
-**Documentation:** Complete and current  
+**Workspace:** Clean and focused on GUI installer  
+**Build System:** GUI EXE installer only  
+**Output:** Single professional installer (1.88 MB)  
 **Status:** Production ready ?
 
 ---
 
-## ?? Getting Started
+## ?? Quick Start
 
-### To Build GUI Installer:
+### Build GUI Installer:
 ```cmd
 Build-InnoSetupInstaller.bat
 ```
 
-### To Test Installation:
+### Test Installation:
 ```cmd
 dist\PSHVTools-Setup-1.0.0.exe
 ```
 
-### To Create GitHub Release:
+### Create GitHub Release:
 1. Go to: https://github.com/vitalie-vrabie/pshvtools/releases
 2. Create new release: v1.0.0
-3. Upload:
-   - `dist/PSHVTools-Setup-1.0.0.exe`
-   - `dist/PSHVTools-Setup-1.0.0.zip`
-   - `release/PSHVTools-v1.0.0.zip`
+3. Upload: `dist/PSHVTools-Setup-1.0.0.exe`
 
 ---
 
-**Workspace is now clean and production-ready!** ?
+**Workspace is now optimized for building the professional GUI EXE installer!** ?

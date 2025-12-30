@@ -157,12 +157,12 @@ foreach ($vm in $vms) {
         param(
             $vmName, $safeVmName, $DateDestination, $TempRoot, $sevenZip, $ForceTurnOff, $GuestCredential, $PollIntervalSeconds, $ShutdownTimeoutSeconds, $KeepCount, $CancelSentinel
         )
-        
+
         # Set up a trap to catch job stopping/termination
         trap {
             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Job termination detected for $vmName, initiating cleanup..."
             $script:JobCancelled = $true
-            throw $_
+            throw
         }
 
         # Do not create any log files; write messages to console only
@@ -177,7 +177,7 @@ foreach ($vm in $vms) {
         function IsCancelled {
             try {
                 if ($script:JobCancelled) { return $true }
-                return (Test-Path -Path $CancelSentinel)
+                return (Test-Path -LiteralPath $CancelSentinel)
             } catch {
                 return $false
             }
@@ -230,7 +230,7 @@ foreach ($vm in $vms) {
             $archivePattern = "$safeVmName*.7z"
             $destArchivePath = $null
 
-            Assert-NotCancelled "before checkpoint"
+            # Replace lingering Assert-NotCancelled call sites
 
             # create checkpoint (try production, fallback standard)
             if ($wasRunning) {
@@ -263,7 +263,10 @@ foreach ($vm in $vms) {
                 }
             }
 
-            Assert-NotCancelled "before export"
+            if (IsCancelled) {
+                LocalLog ("Cancellation detected after checkpoint creation, aborting for {0}" -f $vmName)
+                throw "Operation cancelled by user"
+            }
 
             # Export VM to per-vm folder
             try {
@@ -280,7 +283,10 @@ foreach ($vm in $vms) {
                 throw
             }
 
-            Assert-NotCancelled "after export"
+            if (IsCancelled) {
+                LocalLog ("Cancellation detected after export, aborting for {0}" -f $vmName)
+                throw "Operation cancelled by user"
+            }
 
             # Remove Virtual Hard Disks directory if present (we only want checkpoint/config)
             try {
@@ -295,7 +301,10 @@ foreach ($vm in $vms) {
                 LocalLog ("Failed to remove VHDs from export for {0}: {1}" -f $vmName, $_)
             }
             
-            Assert-NotCancelled "before snapshot removal / restart"
+            if (IsCancelled) {
+                LocalLog ("Cancellation detected before snapshot removal, aborting for {0}" -f $vmName)
+                throw "Operation cancelled by user"
+            }
 
             # remove snapshot if we created one
             if ($snapshotName) {
@@ -326,7 +335,10 @@ foreach ($vm in $vms) {
                 }
             }
 
-            Assert-NotCancelled "before 7z"
+            if (IsCancelled) {
+                LocalLog ("Cancellation detected before 7z archiving, aborting for {0}" -f $vmName)
+                throw "Operation cancelled by user"
+            }
 
             # Create a temp 7z archive name inside shared TempRoot
             $tempArchive = Join-Path $TempRoot ("{0}_{1}.7z" -f $safeVmName, (Get-Date).ToString("yyyyMMddHHmmss"))
@@ -605,16 +617,23 @@ foreach ($vm in $vms) {
                 
                     foreach ($oldArchive in $deleteArchives) {
                         try {
-                        try {
                             LocalLog ("Deleting old archive: {0}" -f $oldArchive.Path)
                             Remove-Item -Path $oldArchive.Path -Force -ErrorAction Stop
                             LocalLog ("Successfully deleted: {0} from {1}" -f $oldArchive.Name, $oldArchive.DateFolder)
-                        
+
                             # If the date folder is now empty, remove it
                             try {
                                 $folderContents = Get-ChildItem -Path $oldArchive.FolderPath -Force -ErrorAction Stop
                                 if ($folderContents.Count -eq 0) {
                                     LocalLog ("Folder {0} is now empty, deleting..." -f $oldArchive.DateFolder)
+                                    Remove-Item -Path $oldArchive.FolderPath -Force -ErrorAction Stop
+                                    LocalLog ("Successfully deleted empty folder: {0}" -f $oldArchive.DateFolder)
+                                } else {
+                                    LocalLog ("Folder {0} still contains {1} items, keeping it" -f $oldArchive.DateFolder, $folderContents.Count)
+                                }
+                            } catch {
+                                LocalLog ("Failed to check/delete folder {0}: {1}" -f $oldArchive.DateFolder, $_)
+                            }
                         } catch {
                             LocalLog ("Failed to delete archive {0}: {1}" -f $oldArchive.Path, $_)
                         }
@@ -626,7 +645,7 @@ foreach ($vm in $vms) {
                         LocalLog ("Found 1 archive for {0}: {1}. No cleanup needed." -f $vmName, $allVmArchives[0].Name)
                     } elseif ($KeepCount -eq 2) {
                         LocalLog ("Found 2 archives for {0}: {1} and {2}. No cleanup needed." -f 
-                            $vmName, $allVmArchives[0].Name, $allVm Archives[1].Name)
+                            $vmName, $allVmArchives[0].Name, $allVmArchives[1].Name)
                     } else {
                         LocalLog ("Found {0} archives for {1}. No cleanup needed." -f $KeepCount, $vmName)
                     }
@@ -702,8 +721,7 @@ $consoleHandler = [ConsoleCancelEventHandler]{
     try {
         $global:VmbkpCancelled = $true
         # Signal cancellation for all child jobs
-        try { New-Item -Path $script:CancelFile -ItemType File -Force | Out-Null } catch {}
-        try { New-Item -Path $script:CancelSentinel -ItemType File -Force | Out-Null } catch {}
+        try { New-Item -Path $CancelSentinel -ItemType File -Force | Out-Null } catch {}
 
         Write-Output ""
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  *** Ctrl+C received: Initiating graceful shutdown ***"
@@ -869,8 +887,6 @@ try {
     }
 } finally {
     try { [Console]::remove_CancelKeyPress($consoleHandler) } catch {}
-
-    try { if (Test-Path -LiteralPath $script:CancelFile) { Remove-Item -LiteralPath $script:CancelFile -Force -ErrorAction SilentlyContinue } } catch {}
 
     # If cancelled, do final cleanup
     if ($global:VmbkpCancelled) {

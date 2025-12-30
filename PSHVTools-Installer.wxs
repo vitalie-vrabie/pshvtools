@@ -46,17 +46,20 @@
 
     <!-- Directory structure -->
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <!-- Program Files installation -->
+      <!-- Program Files installation for documentation -->
       <Directory Id="ProgramFilesFolder">
-        <!-- Application folder -->
         <Directory Id="INSTALLFOLDER" Name="PSHVTools">
           <Directory Id="DocsFolder" Name="docs" />
         </Directory>
-        
-        <!-- PowerShell Modules folder (sibling to PSHVTools) -->
-        <Directory Id="WindowsPowerShellFolder" Name="WindowsPowerShell">
-          <Directory Id="ModulesFolder" Name="Modules">
-            <Directory Id="HvbakModuleFolder" Name="hvbak" />
+      </Directory>
+
+      <!-- System PowerShell Modules folder -->
+      <Directory Id="SystemFolder">
+        <Directory Id="WindowsPowerShellSystemFolder" Name="WindowsPowerShell">
+          <Directory Id="v1.0Folder" Name="v1.0">
+            <Directory Id="ModulesFolder" Name="Modules">
+              <Directory Id="HvbakModuleFolder" Name="hvbak" />
+            </Directory>
           </Directory>
         </Directory>
       </Directory>

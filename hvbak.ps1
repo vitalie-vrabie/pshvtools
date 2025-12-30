@@ -183,6 +183,43 @@ foreach ($vm in $vms) {
             }
         }
 
+        function Stop-ExportProcesses {
+            param(
+                [string]$ExportRoot
+            )
+
+            if (-not $ExportRoot) { return }
+
+            try {
+                $exportRootPrefix = [System.IO.Path]::GetFullPath($ExportRoot)
+            } catch {
+                $exportRootPrefix = $ExportRoot
+            }
+
+            # Try to kill vmwp/vmms processes that are exporting into our temp path.
+            # This is best-effort: we only target processes whose CommandLine references our export directory.
+            try {
+                $candidates = Get-CimInstance Win32_Process -Filter "Name='vmwp.exe' OR Name='vmms.exe'" -ErrorAction SilentlyContinue
+                foreach ($p in ($candidates | Where-Object { $_.CommandLine -and ($_.CommandLine -like "*${exportRootPrefix}*") })) {
+                    try {
+                        LocalLog ("Stopping export worker process: {0} (PID: {1})" -f $p.Name, $p.ProcessId)
+                        Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
+                    } catch {
+                    }
+                }
+            } catch {
+            }
+        }
+
+        function IsCancelled {
+            try {
+                if ($script:JobCancelled) { return $true }
+                return (Test-Path -LiteralPath $CancelSentinel)
+            } catch {
+                return $false
+            }
+        }
+
         LocalLog ("Per-vm job started for {0}" -f $vmName)
         
         # Initialize cancellation flag
@@ -297,6 +334,9 @@ foreach ($vm in $vms) {
 
                             # Best-effort cleanup of partial export output
                             try {
+                                # Attempt to stop the underlying Hyper-V export worker as well
+                                Stop-ExportProcesses -ExportRoot $vmTemp
+
                                 if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
                                     LocalLog ("Cancellation cleanup: Removing incomplete export folder: {0}" -f $vmTemp)
                                     Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction SilentlyContinue
@@ -918,27 +958,39 @@ try {
     while ($true) {
         if ($global:VmbkpCancelled) { break }
 
-        # Get running jobs
+        $totalJobs = $perVmJobs.Count
         $runningJobs = $perVmJobs | Where-Object { $_.State -eq 'Running' }
+        $completedJobs = $perVmJobs | Where-Object { $_.State -in @('Completed','Failed','Stopped') }
+        $completedCount = ($completedJobs | Measure-Object).Count
         $runningCount = ($runningJobs | Measure-Object).Count
-        
+
+        $pct = 0
+        if ($totalJobs -gt 0) {
+            $pct = [math]::Round(($completedCount / $totalJobs) * 100, 0)
+        }
+
+        Write-Progress -Id 0 -Activity "HV Backup" -Status ("Jobs: {0}/{1} completed ({2} running)" -f $completedCount, $totalJobs, $runningCount) -PercentComplete $pct
+        if ($completedCount -gt 0) {
+            $lastDone = ($completedJobs | Select-Object -Last 1)
+            if ($lastDone) {
+                Write-Progress -Id 0 -Activity "HV Backup" -Status ("Last: {0} ({1})" -f $lastDone.Name, $lastDone.State) -PercentComplete $pct
+            }
+        }
+
         # Receive and display output from all jobs (running and completed)
         foreach ($job in $perVmJobs) {
             try {
-                # Receive available output without removing it from the job yet
                 $output = Receive-Job -Job $job -ErrorAction SilentlyContinue
                 if ($output) {
-                    # Stream output directly to console
                     $output | ForEach-Object { Write-Output $_ }
                 }
             } catch {
-                # Silently ignore receive errors during monitoring
             }
         }
-        
-        if (-not $runningJobs -or $runningCount -eq 0) { break }
 
-        # Pump job state without blocking
+        # Exit when nothing is running
+        if ($runningCount -eq 0) { break }
+
         if (-not $global:VmbkpCancelled -and $runningJobs) {
             try { Wait-Job -Job $runningJobs -Timeout 1 -ErrorAction SilentlyContinue | Out-Null } catch {}
         }
@@ -946,20 +998,22 @@ try {
         Start-Sleep -Milliseconds 750
     }
 } finally {
+    # Clear progress bar
+    try { Write-Progress -Id 0 -Activity "HV Backup" -Completed } catch {}
+
     try { [Console]::remove_CancelKeyPress($consoleHandler) } catch {}
 
     # If cancelled, do final cleanup
     if ($global:VmbkpCancelled) {
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Performing final cleanup after cancellation..."
         
-        # Remove any remaining jobs
         foreach ($j in $perVmJobs) {
             try { Remove-Job -Job $j -Force -ErrorAction SilentlyContinue } catch {}
         }
         
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  All background jobs removed"
         Log "Operation cancelled by user. Exiting."
-        exit 130  # Standard exit code for Ctrl+C termination
+        exit 130
     }
 }
 

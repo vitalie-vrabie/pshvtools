@@ -15,8 +15,8 @@
   .\Fix-VhdAcl-NoBak.ps1 -VhdListCsv "C:\temp\vhd-list.csv"
 #>
 
+[CmdletBinding(SupportsShouldProcess)]
 param(
-  [switch]$WhatIf,
   [string]$VhdFolder,
   [string]$VhdListCsv,
   [string]$LogFile = "C:\Temp\FixVhdAcl-NoBak.log"
@@ -88,15 +88,14 @@ function Process-Vhd {
     return
   }
 
-  if ($WhatIf) {
-    if ($VmId) {
-      $vmAccount = "NT VIRTUAL MACHINE\$VmId"
-      Log "WHATIF Would take ownership of $Path"
-      Log "WHATIF Would grant ${vmAccount}:(F) and SYSTEM:(F) and Administrators:(F) to $Path"
-    } else {
-      Log "WHATIF Would take ownership of $Path"
-      Log "WHATIF Would grant SYSTEM:(F) and Administrators:(F) to $Path"
-    }
+  if ($VmId) {
+    $vmAccount = "NT VIRTUAL MACHINE\$VmId"
+    $whatIfMessage = "Take ownership and grant ${vmAccount}:(F), SYSTEM:(F), and Administrators:(F) to $Path"
+  } else {
+    $whatIfMessage = "Take ownership and grant SYSTEM:(F) and Administrators:(F) to $Path"
+  }
+
+  if (-not $PSCmdlet.ShouldProcess($Path, $whatIfMessage)) {
     return
   }
 
@@ -167,4 +166,4 @@ try {
   Log "FATAL ERROR: $_"
 }
 
-Log "Script finished"
+Log "Script finished"Log "Script finished"

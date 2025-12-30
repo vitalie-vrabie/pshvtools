@@ -24,8 +24,13 @@ choco install wixtoolset
 
 ### Build the MSI Installer
 
+**Option 1: Using Batch File (Easiest)**
+```cmd
+Build-WixInstaller.bat
+```
+
+**Option 2: Using PowerShell**
 ```powershell
-# From the repository root directory
 .\Build-WixInstaller.ps1
 ```
 
@@ -46,17 +51,23 @@ This will create:
 
 **Size:** ~300 KB
 
-**Build Command:**
-```powershell
-# Using build script
+**Build Commands:**
+```cmd
+# Batch file (recommended for simplicity)
+Build-WixInstaller.bat
+
+# Batch file with custom output path
+Build-WixInstaller.bat "C:\Release"
+
+# PowerShell script
 .\Build-WixInstaller.ps1
 
-# With custom output path
+# PowerShell with custom output path
 .\Build-WixInstaller.ps1 -OutputPath "C:\Release"
 
-# Manual WiX build
-candle.exe PSVMTools-Installer.wxs
-light.exe -ext WixUIExtension -out dist\PSVMTools-Setup-1.0.0.msi PSVMTools-Installer.wixobj
+# Manual WiX build (advanced)
+candle.exe -nologo PSVMTools-Installer.wxs
+light.exe -nologo -ext WixUIExtension -out dist\PSVMTools-Setup-1.0.0.msi PSVMTools-Installer.wixobj
 ```
 
 **To Install:**
@@ -80,13 +91,26 @@ light.exe -ext WixUIExtension -out dist\PSVMTools-Setup-1.0.0.msi PSVMTools-Inst
 
 ## ?? Build Options
 
-### Custom Output Path
-```powershell
-.\Build-WixInstaller.ps1 -OutputPath "C:\MyBuilds"
+### Batch File Options
+
+```cmd
+# Build with default output path (.\dist)
+Build-WixInstaller.bat
+
+# Build with custom output path
+Build-WixInstaller.bat "C:\MyBuilds"
 ```
 
-### Skip WiX Check (if WiX path is custom)
+### PowerShell Script Options
+
 ```powershell
+# Build with default output path
+.\Build-WixInstaller.ps1
+
+# Custom output path
+.\Build-WixInstaller.ps1 -OutputPath "C:\MyBuilds"
+
+# Skip WiX check (if WiX path is custom)
 .\Build-WixInstaller.ps1 -SkipWixCheck
 ```
 
@@ -259,15 +283,25 @@ Configuration InstallPSVMTools {
 **Solution:**
 - Close any files in `dist` folder
 - Delete `dist` folder and try again
-- Run PowerShell as Administrator if building to protected location
+- Run Command Prompt or PowerShell as Administrator if building to protected location
 
 ### WiX build errors
 **Solution:**
-```powershell
-# Clean build
+```cmd
+# Clean build (Batch)
+rmdir /s /q dist
+Build-WixInstaller.bat
+
+# Clean build (PowerShell)
 Remove-Item -Path "dist" -Recurse -Force -ErrorAction SilentlyContinue
 .\Build-WixInstaller.ps1
 ```
+
+### "Batch file doesn't work"
+**Solution:**
+- Make sure you run from the repository root directory
+- Check that WiX Toolset is properly installed
+- Try running with administrator privileges
 
 ---
 
@@ -288,15 +322,22 @@ When updating to a new version:
             ...>
    ```
 
-3. **Update build script** (`Build-WixInstaller.ps1`):
+3. **Update build scripts:**
+   
+   **Build-WixInstaller.bat:**
+   ```batch
+   set "MSI_FILE=%OUTPUT_PATH%\PSVMTools-Setup-1.1.0.msi"
+   ```
+   
+   **Build-WixInstaller.ps1:**
    ```powershell
    $msiFile = Join-Path -Path $OutputPath -ChildPath "PSVMTools-Setup-1.1.0.msi"
    ```
 
 4. **Rebuild installer:**
-   ```powershell
-   Remove-Item -Path "dist" -Recurse -Force -ErrorAction SilentlyContinue
-   .\Build-WixInstaller.ps1
+   ```cmd
+   rmdir /s /q dist
+   Build-WixInstaller.bat
    ```
 
 ---
@@ -306,7 +347,7 @@ When updating to a new version:
 ### Test Installation
 ```powershell
 # Build
-.\Build-WixInstaller.ps1
+Build-WixInstaller.bat
 
 # Install
 cd dist
@@ -339,7 +380,7 @@ Get-Module vmbak -ListAvailable
 msiexec /i PSVMTools-Setup-1.0.0.msi /quiet /norestart /l*v install.log
 
 # Check log
-Get-Content install.log -Tail 20
+type install.log | more
 
 # Verify
 vmbak
@@ -415,8 +456,12 @@ msiexec /i PSVMTools-Setup-1.0.0.msi /quiet /norestart
 
 ## ?? Summary
 
-**Build Command:**
-```powershell
+**Build Commands:**
+```cmd
+# Batch file (recommended)
+Build-WixInstaller.bat
+
+# PowerShell script
 .\Build-WixInstaller.ps1
 ```
 

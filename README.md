@@ -70,6 +70,12 @@ choco install wixtoolset
 
 ### Build the MSI
 
+**Option 1: Using Batch File (Recommended)**
+```cmd
+Build-WixInstaller.bat
+```
+
+**Option 2: Using PowerShell**
 ```powershell
 .\Build-WixInstaller.ps1
 ```
@@ -88,7 +94,8 @@ PSVMTools/
 ??? vmbak.psm1                         # PowerShell module
 ??? vmbak.psd1                         # Module manifest
 ?
-??? Build-WixInstaller.ps1             # Builds MSI installer
+??? Build-WixInstaller.bat             # Builds MSI installer (Batch)
+??? Build-WixInstaller.ps1             # Builds MSI installer (PowerShell)
 ??? PSVMTools-Installer.wxs            # WiX installer definition
 ?
 ??? README_VMBAK_MODULE.md             # Module documentation
@@ -126,11 +133,14 @@ Distribute the MSI installer:
 ## ?? Quick Reference
 
 ### Build Commands
-```powershell
-# Build MSI installer
+```cmd
+# Build MSI installer (Batch)
+Build-WixInstaller.bat
+
+# Build MSI installer (PowerShell)
 .\Build-WixInstaller.ps1
 
-# Specify output path
+# Specify output path (PowerShell only)
 .\Build-WixInstaller.ps1 -OutputPath "C:\Release"
 ```
 
@@ -225,7 +235,7 @@ Copyright (c) 2025 Vitalie Vrabie
 ### For Developers
 1. Clone the repository
 2. Install WiX Toolset
-3. Run `.\Build-WixInstaller.ps1`
+3. Run `Build-WixInstaller.bat` or `.\Build-WixInstaller.ps1`
 4. Find MSI installer in `dist/` folder
 5. Test and distribute!
 

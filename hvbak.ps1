@@ -162,6 +162,16 @@ foreach ($vm in $vms) {
             $sanitized = $t -replace '[^\x20-\x7E\r\n\t]', '?'
             Write-Output "$ts  $sanitized"
         }
+        
+        # Function to check if job should be cancelled
+        function ShouldCancel {
+            # Check if the parent process has signaled cancellation by stopping this job
+            $currentJob = Get-Job -Id $PID -ErrorAction SilentlyContinue
+            if ($currentJob -and $currentJob.State -eq 'Stopping') {
+                return $true
+            }
+            return $false
+        }
 
         LocalLog ("Per-vm job started for {0}" -f $vmName)
 
@@ -239,6 +249,12 @@ foreach ($vm in $vms) {
                 LocalLog ("Exporting VM {0} to {1}" -f $vmName, $vmTemp)
                 Export-VM -Name $vmName -Path $vmTemp -ErrorAction Stop
                 LocalLog ("Export completed for {0}" -f $vmName)
+                
+                # Check if we should cancel after export completes
+                if (ShouldCancel) {
+                    LocalLog ("Cancellation detected after export, aborting for {0}" -f $vmName)
+                    throw "Operation cancelled by user"
+                }
             } catch {
                 LocalLog ("Export-VM failed or was cancelled for {0}: {1}" -f $vmName, $_)
                 throw
@@ -255,6 +271,12 @@ foreach ($vm in $vms) {
                 }
             } catch {
                 LocalLog ("Failed to remove VHDs from export for {0}: {1}" -f $vmName, $_)
+            }
+            
+            # Check for cancellation before proceeding to cleanup and archiving
+            if (ShouldCancel) {
+                LocalLog ("Cancellation detected before cleanup, aborting for {0}" -f $vmName)
+                throw "Operation cancelled by user"
             }
 
             # remove snapshot if we created one

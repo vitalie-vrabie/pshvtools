@@ -648,6 +648,10 @@ if ($perVmJobs.Count -eq 0) {
 # --- MONITOR JOBS AND STREAM OUTPUT VIA PIPELINE ---
 $global:VmbkpCancelled = $false
 
+# Store these in script scope so they're accessible in the event handler
+$script:TempRootForCleanup = $TempRoot
+$script:DateDestinationForCleanup = $DateDestination
+
 $consoleHandler = [ConsoleCancelEventHandler]{
     param($sender, $e)
     try {
@@ -673,7 +677,7 @@ $consoleHandler = [ConsoleCancelEventHandler]{
                     try {
                         # Check if the process command line contains our temp or destination paths to avoid killing unrelated 7z processes
                         $procCmd = (Get-CimInstance Win32_Process -Filter "ProcessId = $($proc.Id)" -ErrorAction SilentlyContinue).CommandLine
-                        if ($procCmd -and ($procCmd -like "*$TempRoot*" -or $procCmd -like "*$DateDestination*")) {
+                        if ($procCmd -and ($procCmd -like "*$script:TempRootForCleanup*" -or $procCmd -like "*$script:DateDestinationForCleanup*")) {
                             $proc.Kill()
                             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Killed 7z.exe process (PID: $($proc.Id))"
                         }
@@ -691,8 +695,8 @@ $consoleHandler = [ConsoleCancelEventHandler]{
         # Clean up temp folders
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Cleaning up temporary folders..."
         try {
-            $tempPattern = Join-Path $TempRoot '*'
-            $tempItems = Get-ChildItem -Path $TempRoot -ErrorAction SilentlyContinue
+            $tempPattern = Join-Path $script:TempRootForCleanup '*'
+            $tempItems = Get-ChildItem -Path $script:TempRootForCleanup -ErrorAction SilentlyContinue
             if ($tempItems) {
                 foreach ($item in $tempItems) {
                     try {

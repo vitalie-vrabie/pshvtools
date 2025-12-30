@@ -22,8 +22,8 @@ SOFTWARE.
 
 ---
 
-PSVMTools - PowerShell VM Backup Tools
-https://github.com/vitalie-vrabie/scripts
+PSHVTools - PowerShell Hyper-V Tools
+https://github.com/vitalie-vrabie/pshvtools
 
 This software requires:
 - Windows PowerShell 5.1 or later

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*" 
-           Name="PSVMTools" 
+           Name="PSHVTools" 
            Language="1033" 
            Version="1.0.0.0" 
            Manufacturer="Vitalie Vrabie" 
@@ -10,7 +10,7 @@
     <Package InstallerVersion="200" 
              Compressed="yes" 
              InstallScope="perMachine" 
-             Description="PSVMTools - PowerShell VM Backup Tools"
+             Description="PSHVTools - PowerShell Hyper-V Tools"
              Comments="Hyper-V VM backup utilities using checkpoints and 7-Zip compression" />
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
@@ -18,8 +18,8 @@
     <MediaTemplate EmbedCab="yes" />
 
     <!-- Add/Remove Programs properties -->
-    <Property Id="ARPHELPLINK" Value="https://github.com/vitalie-vrabie/psvmtools" />
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/vitalie-vrabie/psvmtools" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/vitalie-vrabie/pshvtools" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/vitalie-vrabie/pshvtools" />
 
     <!-- Check for PowerShell 5.1+ -->
     <Property Id="POWERSHELLVERSION">
@@ -36,8 +36,8 @@
 
     <!-- Feature structure -->
     <Feature Id="ProductFeature" 
-             Title="PSVMTools Core" 
-             Description="Core PSVMTools files and PowerShell module" 
+             Title="PSHVTools Core" 
+             Description="Core PSHVTools files and PowerShell module" 
              Level="1">
       <ComponentGroupRef Id="ProductComponents" />
       <ComponentGroupRef Id="PowerShellModuleComponents" />
@@ -48,7 +48,7 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <!-- Program Files installation -->
       <Directory Id="ProgramFilesFolder">
-        <Directory Id="INSTALLFOLDER" Name="PSVMTools">
+        <Directory Id="INSTALLFOLDER" Name="PSHVTools">
           <Directory Id="DocsFolder" Name="docs" />
         </Directory>
         
@@ -62,7 +62,7 @@
 
       <!-- Start Menu -->
       <Directory Id="ProgramMenuFolder">
-        <Directory Id="ApplicationProgramsFolder" Name="PSVMTools" />
+        <Directory Id="ApplicationProgramsFolder" Name="PSHVTools" />
       </Directory>
     </Directory>
 
@@ -100,17 +100,17 @@
       <Component Id="ApplicationShortcut" Guid="C8D9E0F1-2A3B-4C5D-6E7F-8A9B0C1D2E3F">
         <Shortcut Id="QuickStartShortcut"
                   Name="Quick Start Guide"
-                  Description="PSVMTools Quick Start Guide"
+                  Description="PSHVTools Quick Start Guide"
                   Target="[INSTALLFOLDER]QUICKSTART.md"
                   WorkingDirectory="INSTALLFOLDER" />
         <Shortcut Id="UninstallShortcut"
-                  Name="Uninstall PSVMTools"
-                  Description="Uninstalls PSVMTools"
+                  Name="Uninstall PSHVTools"
+                  Description="Uninstalls PSHVTools"
                   Target="[SystemFolder]msiexec.exe"
                   Arguments="/x [ProductCode]" />
         <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
         <RegistryValue Root="HKCU" 
-                       Key="Software\PSVMTools" 
+                       Key="Software\PSHVTools" 
                        Name="installed" 
                        Type="integer" 
                        Value="1" 

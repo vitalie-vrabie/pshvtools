@@ -1,5 +1,5 @@
 #
-# Module manifest for module 'PSVMTools'
+# Module manifest for module 'PSHVTools'
 #
 
 @{
@@ -17,13 +17,13 @@ GUID = 'a3c5e8f1-9d4b-4a2c-b6e7-8f3d9c1a5b2e'
 Author = 'Vitalie Vrabie'
 
 # Company or vendor of this module
-CompanyName = 'PSVMTools'
+CompanyName = 'PSHVTools'
 
 # Copyright statement for this module
 Copyright = '(c) 2025 Vitalie Vrabie. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'PSVMTools - PowerShell tools for backing up Hyper-V VMs using checkpoints and 7-Zip compression'
+Description = 'PSHVTools - PowerShell tools for backing up Hyper-V VMs using checkpoints and 7-Zip compression'
 
 # Minimum version of the PowerShell engine required by this module
 PowerShellVersion = '5.1'
@@ -49,19 +49,19 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        Tags = @('Hyper-V', 'Backup', 'VM', 'Checkpoint', '7-Zip', 'PSVMTools')
+        Tags = @('Hyper-V', 'Backup', 'VM', 'Checkpoint', '7-Zip', 'PSHVTools')
 
         # A URL to the license for this module.
         # LicenseUri = ''
 
         # A URL to the main website for this project.
-        ProjectUri = 'https://github.com/vitalie-vrabie/psvmtools'
+        ProjectUri = 'https://github.com/vitalie-vrabie/pshvtools'
 
         # A URL to an icon representing this module.
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Initial release of PSVMTools v1.0.0 - Hyper-V VM backup utilities with vmbak and vm-bak commands'
+        ReleaseNotes = 'Initial release of PSHVTools v1.0.0 - Hyper-V VM backup utilities with vmbak and vm-bak commands'
 
     } # End of PSData hashtable
 

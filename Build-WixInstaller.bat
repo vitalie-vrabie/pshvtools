@@ -10,7 +10,7 @@ if not "%~1"=="" set "OUTPUT_PATH=%~1"
 
 echo.
 echo ========================================
-echo   PSVMTools MSI Installer Builder
+echo   PSHVTools MSI Installer Builder
 echo ========================================
 echo.
 
@@ -111,11 +111,11 @@ if not exist "%SCRIPT_DIR%\QUICKSTART.md" (
     echo   [OK] QUICKSTART.md
 )
 
-if not exist "%SCRIPT_DIR%\PSVMTools-Installer.wxs" (
-    echo   [MISSING] PSVMTools-Installer.wxs
+if not exist "%SCRIPT_DIR%\PSHVTools-Installer.wxs" (
+    echo   [MISSING] PSHVTools-Installer.wxs
     set "MISSING_FILES=1"
 ) else (
-    echo   [OK] PSVMTools-Installer.wxs
+    echo   [OK] PSHVTools-Installer.wxs
 )
 
 if defined MISSING_FILES (
@@ -153,9 +153,9 @@ REM Build with WiX
 echo.
 echo Building MSI installer...
 
-set "WXS_FILE=%SCRIPT_DIR%\PSVMTools-Installer.wxs"
-set "WIXOBJ_FILE=%OUTPUT_PATH%\PSVMTools-Installer.wixobj"
-set "MSI_FILE=%OUTPUT_PATH%\PSVMTools-Setup-1.0.0.msi"
+set "WXS_FILE=%SCRIPT_DIR%\PSHVTools-Installer.wxs"
+set "WIXOBJ_FILE=%OUTPUT_PATH%\PSHVTools-Installer.wixobj"
+set "MSI_FILE=%OUTPUT_PATH%\PSHVTools-Setup-1.0.0.msi"
 
 REM Step 1: Compile with candle.exe
 echo   Step 1/2: Compiling WXS to WIXOBJ...
@@ -202,8 +202,8 @@ if exist "%MSI_FILE%" (
 echo.
 echo Installation:
 echo   Interactive: Double-click the MSI file
-echo   Silent:      msiexec /i PSVMTools-Setup-1.0.0.msi /quiet
-echo   Uninstall:   msiexec /x PSVMTools-Setup-1.0.0.msi /quiet
+echo   Silent:      msiexec /i PSHVTools-Setup-1.0.0.msi /quiet
+echo   Uninstall:   msiexec /x PSHVTools-Setup-1.0.0.msi /quiet
 echo.
 
 exit /b 0

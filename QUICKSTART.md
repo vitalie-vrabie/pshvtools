@@ -1,4 +1,4 @@
-# Quick Start Guide - PSVMTools
+# Quick Start Guide - PSHVTools
 
 ## Available Commands
 
@@ -91,17 +91,17 @@ To remove the module:
 
 **Using Add/Remove Programs:**
 1. Open Settings ? Apps
-2. Find "PSVMTools"
+2. Find "PSHVTools"
 3. Click Uninstall
 
 **Using Start Menu:**
 1. Open Start Menu
-2. Find PSVMTools folder
-3. Click "Uninstall PSVMTools"
+2. Find PSHVTools folder
+3. Click "Uninstall PSHVTools"
 
 **Using Command Line:**
 ```cmd
-msiexec /x PSVMTools-Setup-1.0.0.msi
+msiexec /x PSHVTools-Setup-1.0.0.msi
 ```
 
 ## Auto-load Module on Startup (Optional)
@@ -172,5 +172,5 @@ Get-Module vmbak | Select-Object Name, Version, ExportedAliases
 ## Need More Help?
 
 - **Full Documentation:** See README_VMBAK_MODULE.md in installation folder
-- **GitHub Issues:** https://github.com/vitalie-vrabie/psvmtools/issues
-- **Repository:** https://github.com/vitalie-vrabie/psvmtools
+- **GitHub Issues:** https://github.com/vitalie-vrabie/pshvtools/issues
+- **Repository:** https://github.com/vitalie-vrabie/pshvtools

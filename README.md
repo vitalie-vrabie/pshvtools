@@ -1,16 +1,16 @@
-# PSVMTools - PowerShell VM Tools
+# PSHVTools - PowerShell Hyper-V Tools
 
 **Version:** 1.0.0  
-**Product Name:** PSVMTools (PowerShell VM Tools)  
+**Product Name:** PSHVTools (PowerShell Hyper-V Tools)  
 **Module Name:** vmbak  
 **Commands:** `vmbak` or `vm-bak`  
 **License:** MIT
 
 ---
 
-## ?? What is PSVMTools?
+## ?? What is PSHVTools?
 
-PSVMTools is a professional PowerShell module for backing up Hyper-V virtual machines. It provides the `vmbak` and `vm-bak` cmdlets for automated, parallel VM backups with checkpoint support and 7-Zip compression.
+PSHVTools is a professional PowerShell module for backing up Hyper-V virtual machines. It provides the `vmbak` and `vm-bak` cmdlets for automated, parallel VM backups with checkpoint support and 7-Zip compression.
 
 ### Key Features:
 - ?? Live VM backups using Production checkpoints
@@ -27,14 +27,14 @@ PSVMTools is a professional PowerShell module for backing up Hyper-V virtual mac
 
 ### MSI Installer
 
-1. Download `PSVMTools-Setup-1.0.0.msi`
+1. Download `PSHVTools-Setup-1.0.0.msi`
 2. Double-click to install
 3. Follow the wizard
 4. Done!
 
 **Silent install:**
 ```cmd
-msiexec /i PSVMTools-Setup-1.0.0.msi /quiet /norestart
+msiexec /i PSHVTools-Setup-1.0.0.msi /quiet /norestart
 ```
 
 After installation:
@@ -78,7 +78,7 @@ choco install wixtoolset
 Build-WixInstaller.bat
 ```
 
-The MSI installer will be created at: `dist\PSVMTools-Setup-1.0.0.msi`
+The MSI installer will be created at: `dist\PSHVTools-Setup-1.0.0.msi`
 
 **Full build documentation:** See [BUILD_GUIDE.md](BUILD_GUIDE.md)
 
@@ -87,13 +87,13 @@ The MSI installer will be created at: `dist\PSVMTools-Setup-1.0.0.msi`
 ## ?? Repository Structure
 
 ```
-PSVMTools/
+PSHVTools/
 ??? vmbak.ps1                          # Core backup script
 ??? vmbak.psm1                         # PowerShell module
 ??? vmbak.psd1                         # Module manifest
 ?
 ??? Build-WixInstaller.bat             # Builds MSI installer
-??? PSVMTools-Installer.wxs            # WiX installer definition
+??? PSHVTools-Installer.wxs            # WiX installer definition
 ?
 ??? README_VMBAK_MODULE.md             # Module documentation
 ??? QUICKSTART.md                      # Quick start guide
@@ -102,7 +102,7 @@ PSVMTools/
 ??? LICENSE.txt                        # MIT license
 ?
 ??? dist/                              # Build output (created by scripts)
-    ??? PSVMTools-Setup-1.0.0.msi     # MSI installer
+    ??? PSHVTools-Setup-1.0.0.msi     # MSI installer
 ```
 
 ---
@@ -112,15 +112,15 @@ PSVMTools/
 ### For GitHub Releases
 
 Distribute the MSI installer:
-- **PSVMTools-Setup-1.0.0.msi** - Windows Installer package
+- **PSHVTools-Setup-1.0.0.msi** - Windows Installer package
 
 ### For Enterprise IT Departments
 
 **MSI Installer Benefits:**
 - Industry-standard Windows Installer
 - Add/Remove Programs integration
-- Silent install: `msiexec /i PSVMTools-Setup-1.0.0.msi /quiet`
-- Silent uninstall: `msiexec /x PSVMTools-Setup-1.0.0.msi /quiet`
+- Silent install: `msiexec /i PSHVTools-Setup-1.0.0.msi /quiet`
+- Silent uninstall: `msiexec /x PSHVTools-Setup-1.0.0.msi /quiet`
 - Group Policy deployment ready
 - SCCM/Intune compatible
 - Transactional installation with rollback support
@@ -141,16 +141,16 @@ Build-WixInstaller.bat "C:\Release"
 ### Installation Commands
 ```cmd
 # Interactive install
-msiexec /i PSVMTools-Setup-1.0.0.msi
+msiexec /i PSHVTools-Setup-1.0.0.msi
 
 # Silent install
-msiexec /i PSVMTools-Setup-1.0.0.msi /quiet /norestart
+msiexec /i PSHVTools-Setup-1.0.0.msi /quiet /norestart
 
 # Silent install with logging
-msiexec /i PSVMTools-Setup-1.0.0.msi /quiet /norestart /l*v install.log
+msiexec /i PSHVTools-Setup-1.0.0.msi /quiet /norestart /l*v install.log
 
 # Silent uninstall
-msiexec /x PSVMTools-Setup-1.0.0.msi /quiet /norestart
+msiexec /x PSHVTools-Setup-1.0.0.msi /quiet /norestart
 ```
 
 ### Usage Commands
@@ -205,8 +205,8 @@ Get-Help Invoke-VMBackup -Full
 
 ## ?? Support
 
-- **GitHub Issues:** https://github.com/vitalie-vrabie/psvmtools/issues
-- **GitHub Repository:** https://github.com/vitalie-vrabie/psvmtools
+- **GitHub Issues:** https://github.com/vitalie-vrabie/pshvtools/issues
+- **GitHub Repository:** https://github.com/vitalie-vrabie/pshvtools
 - **Documentation:** See docs folder after installation
 
 ---
@@ -259,7 +259,7 @@ Copyright (c) 2025 Vitalie Vrabie
 
 ---
 
-**Thank you for using PSVMTools!** ??
+**Thank you for using PSHVTools!** ??
 
 For questions, issues, or contributions, visit:  
-https://github.com/vitalie-vrabie/psvmtools
+https://github.com/vitalie-vrabie/pshvtools

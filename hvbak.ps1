@@ -188,6 +188,15 @@ foreach ($vm in $vms) {
         # Initialize cancellation flag
         $script:JobCancelled = $false
 
+        # Initialize result container early so property assignments work
+        $result = [ordered]@{
+            VMName       = $vmName
+            TempPath     = $null
+            DestArchive  = $null
+            Success      = $false
+            Message      = $null
+        }
+
         if (IsCancelled) {
             LocalLog ("Cancellation already requested before starting work for {0}" -f $vmName)
             throw "Operation cancelled by user"
@@ -563,36 +572,42 @@ foreach ($vm in $vms) {
             # --- CLEANUP OLD PER-VM ARCHIVES: Keep current + (KeepCount-1) previous archives for this VM ---
             try {
                 LocalLog ("Checking for old archives of {0} to clean up..." -f $vmName)
-            
+
                 # Get the parent destination folder (e.g., R:\vhd)
                 $parentDestination = Split-Path -Path $DateDestination -Parent
-            
+
                 # Find all date folders (YYYYMMDD pattern)
-                $dateFolders = Get-ChildItem -Path $parentDestination -Directory -ErrorAction Stop | 
-                    Where-Object { $_.Name -match '^\d{8}$' } | 
+                $dateFolders = Get-ChildItem -Path $parentDestination -Directory -ErrorAction Stop |
+                    Where-Object { $_.Name -match '^\d{8}$' } |
                     Sort-Object Name -Descending
-            
-                # Find all timestamped archives for this specific VM across all date folders
+
+                # Match only archives that belong to THIS VM.
+                # Archive names are expected as: <safeVmName>_<yyyyMMddHHmmss>.7z
+                $vmArchiveRegex = ('^{0}_(\d{{14}})\.7z$' -f [regex]::Escape($safeVmName))
+
                 $allVmArchives = @()
                 foreach ($folder in $dateFolders) {
                     try {
-                        $vmFiles = Get-ChildItem -Path $folder.FullName -Filter $archivePattern -File -ErrorAction SilentlyContinue
-                    } catch { $vmFiles = @() }
-                    foreach ($file in $vmFiles) {
-                        # Try to parse timestamp from "safeVmName_yyyyMMddHHmmss.7z"
+                        $files = Get-ChildItem -Path $folder.FullName -File -Filter "*.7z" -ErrorAction SilentlyContinue
+                    } catch {
+                        $files = @()
+                    }
+
+                    foreach ($file in $files) {
+                        if ($file.Name -notmatch $vmArchiveRegex) { continue }
+
                         $effectiveTs = $file.LastWriteTime
                         try {
-                            if ($file.BaseName -match '_(\d{14})$') {
-                                $ts = $Matches[1]
-                                $effectiveTs = [datetime]::ParseExact($ts, 'yyyyMMddHHmmss', $null)
-                            }
+                            $ts = $Matches[1]
+                            $effectiveTs = [datetime]::ParseExact($ts, 'yyyyMMddHHmmss', $null)
                         } catch { }
+
                         $allVmArchives += [PSCustomObject]@{
-                            Path        = $file.FullName
-                            Name        = $file.Name
-                            DateFolder  = $folder.Name
-                            FolderPath  = $folder.FullName
-                            SortKey     = $effectiveTs
+                            Path       = $file.FullName
+                            Name       = $file.Name
+                            DateFolder = $folder.Name
+                            FolderPath = $folder.FullName
+                            SortKey    = $effectiveTs
                         }
                     }
                 }
@@ -601,20 +616,20 @@ foreach ($vm in $vms) {
                     $sorted = $allVmArchives | Sort-Object SortKey -Descending
                     $keepArchives = $sorted | Select-Object -First $KeepCount
                     $deleteArchives = $sorted | Select-Object -Skip $KeepCount
-                  
+
                     if ($KeepCount -eq 1) {
-                        LocalLog ("Found {0} archives for {1}. Keeping {2}. Deleting {3} older archives..." -f 
+                        LocalLog ("Found {0} archives for {1}. Keeping {2}. Deleting {3} older archives..." -f
                             $allVmArchives.Count, $vmName, $keepArchives[0].Name, $deleteArchives.Count)
                     } elseif ($KeepCount -eq 2) {
-                        LocalLog ("Found {0} archives for {1}. Keeping {2} and {3}. Deleting {4} older archives..." -f 
+                        LocalLog ("Found {0} archives for {1}. Keeping {2} and {3}. Deleting {4} older archives..." -f
                             $allVmArchives.Count, $vmName, $keepArchives[0].Name, $keepArchives[1].Name, $deleteArchives.Count)
                     } else {
                         $keepNames = ($keepArchives | Select-Object -First 3 | ForEach-Object { $_.Name }) -join ', '
                         if ($KeepCount -gt 3) { $keepNames += ", ..." }
-                        LocalLog ("Found {0} archives for {1}. Keeping {2} most recent ({3}). Deleting {4} older archives..." -f 
+                        LocalLog ("Found {0} archives for {1}. Keeping {2} most recent ({3}). Deleting {4} older archives..." -f
                             $allVmArchives.Count, $vmName, $KeepCount, $keepNames, $deleteArchives.Count)
                     }
-                
+
                     foreach ($oldArchive in $deleteArchives) {
                         try {
                             LocalLog ("Deleting old archive: {0}" -f $oldArchive.Path)
@@ -638,14 +653,15 @@ foreach ($vm in $vms) {
                             LocalLog ("Failed to delete archive {0}: {1}" -f $oldArchive.Path, $_)
                         }
                     }
-                
+
                     LocalLog ("Old archive cleanup completed for {0}." -f $vmName)
                 } elseif ($allVmArchives.Count -eq $KeepCount) {
+                    $sorted = $allVmArchives | Sort-Object SortKey -Descending
                     if ($KeepCount -eq 1) {
-                        LocalLog ("Found 1 archive for {0}: {1}. No cleanup needed." -f $vmName, $allVmArchives[0].Name)
+                        LocalLog ("Found 1 archive for {0}: {1}. No cleanup needed." -f $vmName, $sorted[0].Name)
                     } elseif ($KeepCount -eq 2) {
-                        LocalLog ("Found 2 archives for {0}: {1} and {2}. No cleanup needed." -f 
-                            $vmName, $allVmArchives[0].Name, $allVmArchives[1].Name)
+                        LocalLog ("Found 2 archives for {0}: {1} and {2}. No cleanup needed." -f
+                            $vmName, $sorted[0].Name, $sorted[1].Name)
                     } else {
                         LocalLog ("Found {0} archives for {1}. No cleanup needed." -f $KeepCount, $vmName)
                     }

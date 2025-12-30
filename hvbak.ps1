@@ -298,105 +298,93 @@ foreach ($vm in $vms) {
 
                 LocalLog ("Creating 7z archive: {0} -> {1}" -f $vmTemp, $tempArchive)
                 # Use 7z format with fast compression and multithreading
-                $args = @("a","-t7z","-mx=1","-mmt=on",$tempArchive,"*")
+                # Add -bsp1 to get progress percentage updates
+                $args = @("a","-t7z","-mx=1","-mmt=on","-bsp1",$tempArchive,"*")
 
-                # Start 7z as a separate process and robustly determine its PID to set priority.
+                # Start 7z as a separate process with redirected output to capture progress
                 $proc = $null
                 $sevenZipPid = $null
                 try {
-                    # Start 7z without redirecting to log files
-                    $proc = Start-Process -FilePath $sevenZip -ArgumentList $args -NoNewWindow -PassThru -ErrorAction Stop
-                } catch {
-                    LocalLog ("Start-Process returned error for 7z: {0}" -f $_)
-                    # fall-through, attempt to find 7z by commandline below
-                }
-
-                # Determine PID: prefer $proc.Id, otherwise best-effort search by command line matching the tempArchive or vmTemp
-                if ($proc -and $proc.Id) {
+                    $psi = New-Object System.Diagnostics.ProcessStartInfo
+                    $psi.FileName = $sevenZip
+                    $psi.Arguments = $args -join ' '
+                    $psi.UseShellExecute = $false
+                    $psi.RedirectStandardOutput = $true
+                    $psi.RedirectStandardError = $true
+                    $psi.CreateNoWindow = $true
+                    $psi.WorkingDirectory = $vmTemp
+                    
+                    $proc = New-Object System.Diagnostics.Process
+                    $proc.StartInfo = $psi
+                    $proc.Start() | Out-Null
                     $sevenZipPid = $proc.Id
-                } else {
+                    
+                    LocalLog ("Started 7z process (PID: {0})" -f $sevenZipPid)
+                    
+                    # Set process priority to Idle
                     try {
-                        $candidates = Get-CimInstance -ClassName Win32_Process -Filter "Name='7z.exe'" -ErrorAction SilentlyContinue
-                        if ($candidates) {
-                          $match = $candidates | Where-Object { $_.CommandLine -and ( $_.CommandLine -like "*$tempArchive*" -or $_.CommandLine -like "*$vmTemp*" -or $_.CommandLine -like "*$TempRoot*" -or $_.CommandLine -like "*$DateDestination*" ) } |
-                                   Sort-Object CreationDate -Descending | Select-Object -First 1
-                          if ($match) { $sevenZipPid = $match.ProcessId }
-                        }
+                        $proc.PriorityClass = 'Idle'
+                        LocalLog ("Set 7z process to Idle priority")
                     } catch {
-                        LocalLog ("Failed to probe Win32_Process for 7z: {0}" -f $_)
+                        LocalLog ("Failed to set 7z process priority: {0}" -f $_)
                     }
-                }
-
-                if ($sevenZipPid) {
-                    # Use System.Diagnostics.Process to set priority and wait for exit.
-                    try {
-                        $sysProc = [System.Diagnostics.Process]::GetProcessById([int]$sevenZipPid)
-                        try {
-                            $sysProc.PriorityClass = 'Idle'
-                            LocalLog ("Set 7z process to Idle (PID: {0})" -f $sevenZipPid)
-                        } catch {
-                            LocalLog ("Failed to set 7z process priority: {0}" -f $_)
-                        }
-
-                        # Wait for process to exit and get exit code
-                        LocalLog ("Waiting for 7z process (PID: {0}) to complete..." -f $sevenZipPid)
-                        $sysProc.WaitForExit()
                     
-                        # Small delay to ensure exit code is available
-                        Start-Sleep -Milliseconds 100
-                    
-                        # Refresh to ensure we have latest info
-                        try { $sysProc.Refresh() } catch { LocalLog ("Could not refresh process info: {0}" -f $_) }
-                    
-                        # Get exit code with better error handling
-                        $exit = $null
-                        try {
-                            $exit = $sysProc.ExitCode
-                        } catch {
-                            LocalLog ("Could not read ExitCode property: {0}" -f $_)
-                            # If we can't get the exit code but archive exists, assume success
-                            if (Test-Path $tempArchive) {
-                                LocalLog ("Archive exists, assuming success despite ExitCode read failure")
-                                $exit = 0
-                            } else {
-                                $exit = -1
+                    # Read output asynchronously and parse for progress
+                    $lastProgress = -1
+                    while (-not $proc.HasExited) {
+                        $line = $proc.StandardOutput.ReadLine()
+                        if ($line) {
+                            # Parse progress: 7z outputs lines like "  5%" or " 15%"
+                            if ($line -match '^\s*(\d+)%') {
+                                $currentProgress = [int]$Matches[1]
+                                # Only log progress in 10% increments to reduce output spam
+                                if ($currentProgress -ge ($lastProgress + 10)) {
+                                    LocalLog ("[7z] Archiving progress: {0}%" -f $currentProgress)
+                                    $lastProgress = $currentProgress
+                                }
                             }
                         }
-                    
-                        LocalLog ("7z process (PID: {0}) exited with code: {1}" -f $sevenZipPid, $exit)
-                    
-                        # Check if archive was created
-                        if (Test-Path $tempArchive) {
-                            $archiveSize = (Get-Item $tempArchive).Length
-                            LocalLog ("7z archive created: {0} (size: {1} bytes)" -f $tempArchive, $archiveSize)
-                        } else {
-                            LocalLog ("WARNING: 7z archive not found at: {0}" -f $tempArchive)
-                        }
-                    
-                        # Only throw if exit code is non-zero AND we have a valid exit code
-                        if ($exit -ne 0 -and $null -ne $exit) {
-                            throw "7z exited with non-zero code $exit"
-                        }
-                    } catch {
-                        LocalLog ("Error while waiting/inspecting 7z process (PID: {0}): {1}" -f $sevenZipPid, $_)
-                        # Log additional diagnostic info
-                        LocalLog ("7z command was: {0} {1}" -f $sevenZip, ($args -join ' '))
-                        LocalLog ("Working directory was: {0}" -f $vmTemp)
-                        LocalLog ("Target archive: {0}" -f $tempArchive)
-                     
-                        throw
-                    } finally {
-                        try { if ($sysProc) { $sysProc.Dispose() } } catch {}
+                        Start-Sleep -Milliseconds 100
                     }
-                } else {
-                    # As a last resort, wait for any 7z.exe child to finish and verify the archive was created.
-                    LocalLog ("Could not obtain PID for 7z process; falling back to Wait-Process by name and existence check.")
-                    try {
-                        # Wait briefly for any 7z.exe processes to exit (best-effort)
-                        Wait-Process -Name "7z" -ErrorAction SilentlyContinue -Timeout 0
-                    } catch {}
-                    if (-not (Test-Path $tempArchive)) {
-                        throw "7z did not produce expected archive file and PID was unavailable."
+                    
+                    # Read any remaining output
+                    $remainingOutput = $proc.StandardOutput.ReadToEnd()
+                    $errorOutput = $proc.StandardError.ReadToEnd()
+                    
+                    if ($errorOutput) {
+                        LocalLog ("7z stderr: {0}" -f $errorOutput)
+                    }
+                    
+                    $exit = $proc.ExitCode
+                    LocalLog ("7z process (PID: {0}) exited with code: {1}" -f $sevenZipPid, $exit)
+                    
+                    # Check if archive was created
+                    if (Test-Path $tempArchive) {
+                        $archiveSize = (Get-Item $tempArchive).Length
+                        LocalLog ("7z archive created: {0} (size: {1} bytes)" -f $tempArchive, $archiveSize)
+                    } else {
+                        LocalLog ("WARNING: 7z archive not found at: {0}" -f $tempArchive)
+                    }
+                    
+                    # Only throw if exit code is non-zero
+                    if ($exit -ne 0) {
+                        throw "7z exited with non-zero code $exit"
+                    }
+                    
+                } catch {
+                    LocalLog ("Error while running 7z process: {0}" -f $_)
+                    LocalLog ("7z command was: {0} {1}" -f $sevenZip, ($args -join ' '))
+                    LocalLog ("Working directory was: {0}" -f $vmTemp)
+                    LocalLog ("Target archive: {0}" -f $tempArchive)
+                    throw
+                } finally {
+                    if ($proc) {
+                        try { 
+                            if (-not $proc.HasExited) { 
+                                $proc.Kill() 
+                            }
+                            $proc.Dispose() 
+                        } catch {}
                     }
                 }
             } finally {

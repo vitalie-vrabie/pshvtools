@@ -17,15 +17,9 @@
     
     <MediaTemplate EmbedCab="yes" />
 
-    <!-- Icon for Add/Remove Programs -->
-    <Icon Id="ProductIcon" SourceFile="icon.ico" />
-    <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
-    
     <!-- Add/Remove Programs properties -->
-    <Property Id="ARPHELPLINK" Value="https://github.com/vitalie-vrabie/scripts" />
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/vitalie-vrabie/scripts" />
-    <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
-    <Property Id="ARPNOMODIFY" Value="yes" Secure="yes" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/vitalie-vrabie/psvmtools" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/vitalie-vrabie/psvmtools" />
 
     <!-- Check for PowerShell 5.1+ -->
     <Property Id="POWERSHELLVERSION">
@@ -57,10 +51,8 @@
         <Directory Id="INSTALLFOLDER" Name="PSVMTools">
           <Directory Id="DocsFolder" Name="docs" />
         </Directory>
-      </Directory>
-
-      <!-- PowerShell Modules folder -->
-      <Directory Id="ProgramFilesFolder">
+        
+        <!-- PowerShell Modules folder -->
         <Directory Id="WindowsPowerShellFolder" Name="WindowsPowerShell">
           <Directory Id="ModulesFolder" Name="Modules">
             <Directory Id="VmbakModuleFolder" Name="vmbak" />
@@ -125,27 +117,6 @@
                        KeyPath="yes" />
       </Component>
     </DirectoryRef>
-
-    <!-- Custom action to import PowerShell module -->
-    <CustomAction Id="ImportPowerShellModule"
-                  Execute="deferred"
-                  Impersonate="no"
-                  Return="ignore"
-                  Directory="VmbakModuleFolder"
-                  ExeCommand="powershell.exe -NoProfile -Command &quot;Import-Module vmbak -Force&quot;" />
-
-    <!-- Custom action to remove PowerShell module on uninstall -->
-    <CustomAction Id="RemovePowerShellModule"
-                  Execute="deferred"
-                  Impersonate="no"
-                  Return="ignore"
-                  ExeCommand="powershell.exe -NoProfile -Command &quot;Remove-Module vmbak -Force -ErrorAction SilentlyContinue&quot;" />
-
-    <!-- Install sequence -->
-    <InstallExecuteSequence>
-      <Custom Action="ImportPowerShellModule" After="InstallFiles">NOT Installed</Custom>
-      <Custom Action="RemovePowerShellModule" Before="RemoveFiles">Installed AND NOT REINSTALL</Custom>
-    </InstallExecuteSequence>
 
     <!-- UI configuration -->
     <UIRef Id="WixUI_InstallDir" />

@@ -588,6 +588,19 @@ foreach ($vm in $vms) {
                 if ($pushed) { Pop-Location }
             }
 
+            # Remove per-vm export folder immediately after archive creation (before moving archive)
+            try {
+                if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
+                    LocalLog ("Archive created; removing per-VM temp folder before move: {0}" -f $vmTemp)
+                    Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction Stop
+                    LocalLog ("Removed per-VM temp folder: {0}" -f $vmTemp)
+                    $vmTemp = $null
+                }
+            } catch {
+                LocalLog ("Failed to remove per-VM temp folder before move {0}: {1}" -f $vmTemp, $_)
+                # keep going; move can still succeed
+            }
+
             # Move archive to final destination
             try {
                 $destArchiveLeaf = Split-Path -Path $tempArchive -Leaf
@@ -641,10 +654,12 @@ foreach ($vm in $vms) {
 
                 # Delete per-vm export folder (entire folder) now that archive is safely at destination
                 try {
-                    LocalLog ("Removing per-VM temp folder: {0}" -f $vmTemp)
-                    Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction Stop
-                    LocalLog ("Removed per-VM temp folder: {0}" -f $vmTemp)
-                    $vmTemp = $null  # Mark as cleaned up
+                    if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
+                        LocalLog ("Removing per-VM temp folder: {0}" -f $vmTemp)
+                        Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction Stop
+                        LocalLog ("Removed per-VM temp folder: {0}" -f $vmTemp)
+                        $vmTemp = $null  # Mark as cleaned up
+                    }
                 } catch {
                     LocalLog ("Failed to remove per-VM temp folder {0}: {1}" -f $vmTemp, $_)
                 }

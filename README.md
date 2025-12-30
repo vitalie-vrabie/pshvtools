@@ -259,6 +259,97 @@ Copyright (c) 2025 Vitalie Vrabie
 
 ---
 
+## ??? Building the Release Package
+
+### Using MSBuild (NEW - Recommended)
+
+**Prerequisites:**
+- Visual Studio 2022 (any edition) OR
+- .NET SDK 6.0 or later
+
+**Build command:**
+```cmd
+Build-Release.bat
+```
+
+**Output:**
+- `release\PSHVTools-v1.0.0.zip` - Complete release package
+
+### What's in the Release Package:
+
+- `hvbak.ps1` - Core backup script
+- `hvbak.psm1` - PowerShell module
+- `hvbak.psd1` - Module manifest
+- `Install-PSHVTools.ps1` - PowerShell installer
+- `Uninstall-PSHVTools.ps1` - PowerShell uninstaller
+- `QUICKSTART.md` - Quick start guide
+- `README.md` - Full documentation
+- `LICENSE.txt` - MIT license
+
+---
+
+## ?? Installation
+
+### PowerShell Installer (Recommended)
+
+1. Extract the release ZIP file
+2. Right-click `Install-PSHVTools.ps1` ? Run as Administrator
+3. Done!
+
+The installer will:
+- Copy module files to `C:\Program Files\WindowsPowerShell\Modules\hvbak\`
+- Verify the installation
+- Display success message
+
+After installation:
+```powershell
+# Display help
+hvbak
+
+# Backup all VMs
+hvbak -NamePattern "*"
+```
+
+### Manual Installation
+
+Copy module files to one of these locations:
+```
+System-wide (requires admin):
+C:\Program Files\WindowsPowerShell\Modules\hvbak\
+
+User-specific (no admin):
+C:\Users\<username>\Documents\WindowsPowerShell\Modules\hvbak\
+```
+
+---
+
+## ??? Uninstallation
+
+Run as Administrator:
+```powershell
+.\Uninstall-PSHVTools.ps1
+```
+
+Or manually delete:
+```
+C:\Program Files\WindowsPowerShell\Modules\hvbak\
+```
+
+---
+
+## ??? Building the MSI Installer (Legacy - Deprecated)
+
+**Note:** The WiX MSI installer is deprecated due to complexity and reliability issues. Use the PowerShell installer instead.
+
+If you still need the MSI:
+```cmd
+Build-WixInstaller.bat
+```
+
+Requires: WiX Toolset v3.14+
+
+---
+
 **Thank you for using PSHVTools!** ??
 
 For questions, issues, or contributions, visit:  

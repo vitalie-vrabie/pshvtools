@@ -118,12 +118,18 @@ if not exist "%SCRIPT_DIR%\PSHVTools-Installer.wxs" (
     echo   [OK] PSHVTools-Installer.wxs
 )
 
-REM Check for license file
+REM Check for license file and create RTF version if needed
 if not exist "%SCRIPT_DIR%\License.rtf" (
-    echo.
-    echo [ERROR] License.rtf not found!
-    echo Please ensure License.rtf exists in the project root.
-    set "MISSING_FILES=1"
+    if exist "%SCRIPT_DIR%\LICENSE.txt" (
+        echo.
+        echo [ERROR] License.rtf not found!
+        echo Please ensure License.rtf exists in the project root.
+        set "MISSING_FILES=1"
+    ) else (
+        echo.
+        echo [ERROR] No license file found!
+        set "MISSING_FILES=1"
+    )
 ) else (
     echo   [OK] License.rtf
 )

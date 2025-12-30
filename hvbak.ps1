@@ -791,7 +791,31 @@ foreach ($j in $perVmJobs) {
         try {
             $jobState = $j.State
             $jobName = $j.Name
-            Log ("Per-vm Job Id {0} (Name: {1}, State: {2}) could not be received due to serialization error. Job likely completed successfully." -f $j.Id, $jobName, $jobState)
+            $jobError = $null
+            
+            # Try to get any error information from the job
+            if ($j.ChildJobs -and $j.ChildJobs[0]) {
+                $childJob = $j.ChildJobs[0]
+                if ($childJob.Error -and $childJob.Error.Count -gt 0) {
+                    $jobError = $childJob.Error[0].ToString()
+                }
+                if ($childJob.Warning -and $childJob.Warning.Count -gt 0) {
+                    $warnings = $childJob.Warning -join "; "
+                    Log ("Per-vm Job Id {0} warnings: {1}" -f $j.Id, $warnings)
+                }
+            }
+            
+            if ($jobState -eq 'Failed') {
+                if ($jobError) {
+                    Log ("Per-vm Job Id {0} FAILED with error: {1}" -f $j.Id, $jobError)
+                } else {
+                    Log ("Per-vm Job Id {0} FAILED but error details could not be retrieved (serialization issue)" -f $j.Id)
+                }
+            } elseif ($jobState -eq 'Completed') {
+                Log ("Per-vm Job Id {0} completed but output could not be received (serialization issue). Check job logs." -f $j.Id)
+            } else {
+                Log ("Per-vm Job Id {0} (Name: {1}, State: {2}) could not be received due to serialization error." -f $j.Id, $jobName, $jobState)
+            }
         } catch {
             Log ("Per-vm Job Id {0} already processed by handler or could not be accessed: {1}" -f $j.Id, $_.Exception.Message)
         }

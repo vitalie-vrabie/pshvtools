@@ -48,11 +48,12 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <!-- Program Files installation -->
       <Directory Id="ProgramFilesFolder">
+        <!-- Application folder -->
         <Directory Id="INSTALLFOLDER" Name="PSHVTools">
           <Directory Id="DocsFolder" Name="docs" />
         </Directory>
         
-        <!-- PowerShell Modules folder -->
+        <!-- PowerShell Modules folder (sibling to PSHVTools) -->
         <Directory Id="WindowsPowerShellFolder" Name="WindowsPowerShell">
           <Directory Id="ModulesFolder" Name="Modules">
             <Directory Id="HvbakModuleFolder" Name="hvbak" />

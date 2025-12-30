@@ -658,13 +658,38 @@ $consoleHandler = [ConsoleCancelEventHandler]{
         $global:VmbkpCancelled = $true
         Write-Output ""
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  *** Ctrl+C received: Initiating graceful shutdown ***"
-        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Stopping all background jobs..."
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Stopping all background jobs and triggering cleanup..."
         
-        # Stop all PowerShell background jobs
+        # Stop all PowerShell background jobs - this will trigger their finally blocks
         foreach ($j in $perVmJobs) { 
-            try { 
-                Stop-Job -Job $j -Force -ErrorAction SilentlyContinue 
-                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Stopped job: $($j.Name) (ID: $($j.Id))"
+            try {
+                # Get job state before stopping
+                $jobState = $j.State
+                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Stopping job: $($j.Name) (ID: $($j.Id), State: $jobState)"
+                
+                # Stop the job - this triggers the finally block in the job
+                Stop-Job -Job $j -ErrorAction SilentlyContinue
+                
+                # Give the job a moment to execute its finally block
+                Start-Sleep -Milliseconds 500
+                
+                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Job stopped: $($j.Name)"
+            } catch {
+                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error stopping job $($j.Id): $_"
+            }
+        }
+        
+        # Wait a bit more for cleanup operations to complete in the jobs
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Waiting for job cleanup to complete..."
+        Start-Sleep -Seconds 2
+        
+        # Collect any output from the jobs' cleanup operations
+        foreach ($j in $perVmJobs) {
+            try {
+                $cleanupOutput = Receive-Job -Job $j -ErrorAction SilentlyContinue
+                if ($cleanupOutput) {
+                    $cleanupOutput | ForEach-Object { Write-Output $_ }
+                }
             } catch {}
         }
         
@@ -692,12 +717,14 @@ $consoleHandler = [ConsoleCancelEventHandler]{
             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error checking for 7z processes: $_"
         }
         
-        # Clean up temp folders
+        # Clean up temp folders - this catches any incomplete exports
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Cleaning up temporary folders..."
         try {
             $tempPattern = Join-Path $script:TempRootForCleanup '*'
             $tempItems = Get-ChildItem -Path $script:TempRootForCleanup -ErrorAction SilentlyContinue
             if ($tempItems) {
+                $itemCount = $tempItems.Count
+                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Found $itemCount temp items to remove..."
                 foreach ($item in $tempItems) {
                     try {
                         Remove-Item -Path $item.FullName -Recurse -Force -ErrorAction SilentlyContinue
@@ -709,6 +736,50 @@ $consoleHandler = [ConsoleCancelEventHandler]{
             }
         } catch {
             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error during temp cleanup: $_"
+        }
+        
+        # Additional VM cleanup - ensure any export snapshots are removed and VMs are restarted
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Checking for orphaned export snapshots..."
+        try {
+            # Get all VMs that match the original pattern
+            $allVms = Get-VM -Name $NamePattern -ErrorAction SilentlyContinue
+            if ($allVms) {
+                foreach ($vm in $allVms) {
+                    try {
+                        # Look for export snapshots (they start with "export_")
+                        $exportSnapshots = Get-VMSnapshot -VMName $vm.Name -ErrorAction SilentlyContinue | 
+                            Where-Object { $_.Name -like "export_*" }
+                        
+                        if ($exportSnapshots) {
+                            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Found orphaned snapshot(s) for VM: $($vm.Name)"
+                            foreach ($snap in $exportSnapshots) {
+                                try {
+                                    Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Removing snapshot: $($snap.Name)"
+                                    Remove-VMSnapshot -VMSnapshot $snap -ErrorAction Stop
+                                    Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Snapshot removed: $($snap.Name)"
+                                } catch {
+                                    Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Failed to remove snapshot $($snap.Name): $_"
+                                }
+                            }
+                        }
+                        
+                        # Check if VM needs to be restarted (if it's Off but was likely running)
+                        if ($vm.State -eq 'Off') {
+                            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  VM $($vm.Name) is Off, attempting to start..."
+                            try {
+                                Start-VM -Name $vm.Name -ErrorAction Stop
+                                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  VM $($vm.Name) started"
+                            } catch {
+                                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Could not start VM $($vm.Name): $_"
+                            }
+                        }
+                    } catch {
+                        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error processing VM $($vm.Name): $_"
+                    }
+                }
+            }
+        } catch {
+            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error during VM cleanup: $_"
         }
         
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  *** Shutdown complete - Exiting ***"

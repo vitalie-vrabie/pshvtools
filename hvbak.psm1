@@ -22,7 +22,7 @@ function Invoke-VMBackup {
       Wildcard pattern to match VM names (e.g., "*" for all VMs, "web-*" for VMs starting with "web-").
 
     .PARAMETER Destination
-      Root destination folder for backups. A date-stamped subfolder (YYYYMMDD) is created automatically. Default: R:\vhd
+      Root destination folder for backups. A date-stamped subfolder (YYYYMMDD) is created automatically. Default: %USERPROFILE%\hvbak-archives
 
     .PARAMETER TempFolder
       Temporary folder for VM exports during backup processing. Default: %TEMP%\hvbak
@@ -35,7 +35,7 @@ function Invoke-VMBackup {
 
     .EXAMPLE
       hvbak -NamePattern "*"
-      Exports all VMs to R:\vhd\YYYYMMDD using default temp folder
+      Exports all VMs to %USERPROFILE%\hvbak-archives\YYYYMMDD using default temp folder
 
     .EXAMPLE
       hv-bak -NamePattern "srv-*" -Destination "D:\backups" -TempFolder "E:\temp"
@@ -61,7 +61,7 @@ function Invoke-VMBackup {
         [string]$NamePattern,
 
         [Parameter(Mandatory = $false)]
-        [string]$Destination = "R:\vhd",
+        [string]$Destination = "$env:USERPROFILE\hvbak-archives",
 
         [Parameter(Mandatory = $false)]
         [string]$TempFolder = "$env:TEMP\hvbak",

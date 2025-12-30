@@ -166,4 +166,4 @@ try {
   Log "FATAL ERROR: $_"
 }
 
-Log "Script finished"Log "Script finished"
+Log "Script finished"

@@ -110,7 +110,7 @@ Upload as Line-of-Business app and assign to groups
 ## ?? Documentation
 
 - **Quick Start Guide**: See QUICKSTART.md in installation folder
-- **Module Documentation**: README_VMBAK_MODULE.md
+- **Module Documentation**: README_HVBAK_MODULE.md
 - **Build Instructions**: BUILD_GUIDE.md
 - **GitHub Repository**: https://github.com/vitalie-vrabie/pshvtools
 

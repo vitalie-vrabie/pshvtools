@@ -49,7 +49,7 @@ All command references have been renamed from `vmbak`/`vm-bak` to `hvbak`/`hv-ba
    - Updated Quick Start examples
    - Changed all command references
 
-6. **VM-BAK_COMMAND_REGISTRATION.md**
+6. **HVBAK_COMMAND_REGISTRATION.md**
    - Renamed to reflect new command names
    - Updated all technical details
    - Updated examples throughout
@@ -133,7 +133,7 @@ Import-PowerShellDataFile .\vmbak.psd1 | Select-Object AliasesToExport
 | README.md | vmbak, vm-bak | hvbak, hv-bak | ? Updated |
 | QUICKSTART.md | vmbak, vm-bak | hvbak, hv-bak | ? Updated |
 | RELEASE_NOTES_v1.0.0.md | vmbak, vm-bak | hvbak, hv-bak | ? Updated |
-| VM-BAK_COMMAND_REGISTRATION.md | vmbak, vm-bak | hvbak, hv-bak | ? Updated |
+| HVBAK_COMMAND_REGISTRATION.md | vmbak, vm-bak | hvbak, hv-bak | ? Updated |
 | MSI Installer | vmbak, vm-bak | hvbak, hv-bak | ? Rebuilt |
 
 ---

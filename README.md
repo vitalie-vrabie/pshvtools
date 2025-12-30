@@ -178,7 +178,7 @@ Get-Help Invoke-VMBackup -Full
 
 | Document | Description | Target Audience |
 |----------|-------------|-----------------|
-| [README_VMBAK_MODULE.md](README_VMBAK_MODULE.md) | Module features and usage | End Users |
+| [README_HVBAK_MODULE.md](README_HVBAK_MODULE.md) | Module features and usage | End Users |
 | [QUICKSTART.md](QUICKSTART.md) | Quick start guide | End Users |
 | [BUILD_GUIDE.md](BUILD_GUIDE.md) | Building the MSI installer | Developers |
 | [PACKAGE_README.md](PACKAGE_README.md) | Package overview | Distributors |

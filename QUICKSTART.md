@@ -171,6 +171,6 @@ Get-Module hvbak | Select-Object Name, Version, ExportedAliases
 
 ## Need More Help?
 
-- **Full Documentation:** See README_VMBAK_MODULE.md in installation folder
+- **Full Documentation:** See README_HVBAK_MODULE.md in installation folder
 - **GitHub Issues:** https://github.com/vitalie-vrabie/pshvtools/issues
 - **Repository:** https://github.com/vitalie-vrabie/pshvtools

@@ -129,6 +129,36 @@ begin
   Result := (ResultCode = 0);
 end;
 
+function Check7Zip(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  // Check if 7z.exe is available in PATH
+  Result := Exec('cmd.exe',
+    '/c where 7z.exe >nul 2>&1',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if Result and (ResultCode = 0) then
+  begin
+    Result := True;
+    exit;
+  end;
+
+  // Check common installation locations
+  if FileExists(ExpandConstant('{pf}\7-Zip\7z.exe')) then
+  begin
+    Result := True;
+    exit;
+  end;
+
+  if FileExists(ExpandConstant('{pf32}\7-Zip\7z.exe')) then
+  begin
+    Result := True;
+    exit;
+  end;
+
+  Result := False;
+end;
+
 procedure InitializeWizard();
 begin
   RequirementsOK := True;
@@ -144,18 +174,19 @@ end;
 function NextButtonClick(CurPageID: Integer): Boolean;
 var
   HasHyperV: Boolean;
+  Has7Zip: Boolean;
   Message: String;
 begin
   Result := True;
-  
+
   if CurPageID = wpWelcome then
   begin
     // Show requirements page
     PowerShellVersionPage.RichEditViewer.Clear;
-    
+
     // Check PowerShell version
     PowerShellVersionPage.RichEditViewer.Lines.Add('Checking PowerShell version...');
-    
+
     if CheckPowerShellVersion() then
     begin
       PowerShellVersionPage.RichEditViewer.Lines.Add('  [OK] PowerShell 5.1+ detected');
@@ -165,12 +196,12 @@ begin
       PowerShellVersionPage.RichEditViewer.Lines.Add('  [ERROR] PowerShell 5.1 or later is required!');
       RequirementsOK := False;
     end;
-    
+
     // Check Hyper-V
     PowerShellVersionPage.RichEditViewer.Lines.Add('');
     PowerShellVersionPage.RichEditViewer.Lines.Add('Checking Hyper-V...');
     HasHyperV := CheckHyperV();
-    
+
     if HasHyperV then
     begin
       PowerShellVersionPage.RichEditViewer.Lines.Add('  [OK] Hyper-V PowerShell module is available');
@@ -180,7 +211,24 @@ begin
       PowerShellVersionPage.RichEditViewer.Lines.Add('  [WARNING] Hyper-V PowerShell module not detected');
       PowerShellVersionPage.RichEditViewer.Lines.Add('  The module will install, but requires Hyper-V to function.');
     end;
-    
+
+    // Check 7-Zip
+    PowerShellVersionPage.RichEditViewer.Lines.Add('');
+    PowerShellVersionPage.RichEditViewer.Lines.Add('Checking 7-Zip (7z.exe)...');
+    Has7Zip := Check7Zip();
+
+    if Has7Zip then
+    begin
+      PowerShellVersionPage.RichEditViewer.Lines.Add('  [OK] 7-Zip detected (7z.exe)');
+    end
+    else
+    begin
+      PowerShellVersionPage.RichEditViewer.Lines.Add('  [ERROR] 7-Zip not detected (7z.exe)');
+      PowerShellVersionPage.RichEditViewer.Lines.Add('  Please install 7-Zip and ensure 7z.exe is in PATH,');
+      PowerShellVersionPage.RichEditViewer.Lines.Add('  or installed in "C:\\Program Files\\7-Zip\\7z.exe".');
+      RequirementsOK := False;
+    end;
+
     // Show summary
     PowerShellVersionPage.RichEditViewer.Lines.Add('');
     if RequirementsOK then
@@ -195,9 +243,10 @@ begin
       Message := 'Your system does not meet the minimum requirements for PSHVTools.' + #13#10 + #13#10;
       Message := Message + 'Required:' + #13#10;
       Message := Message + '  - PowerShell 5.1 or later' + #13#10;
+      Message := Message + '  - 7-Zip (7z.exe in PATH or standard install location)' + #13#10;
       Message := Message + '  - Hyper-V (recommended)' + #13#10 + #13#10;
       Message := Message + 'Do you want to abort the installation?';
-      
+
       if MsgBox(Message, mbError, MB_YESNO) = IDYES then
       begin
         Result := False;

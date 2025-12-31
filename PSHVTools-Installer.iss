@@ -79,10 +79,6 @@ Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "BUILD_GUIDE.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "PROJECT_SUMMARY.md"; DestDir: "{app}"; Flags: ignoreversion
 
-; Installation scripts (for reference)
-Source: "Install-PSHVTools.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Uninstall-PSHVTools.ps1"; DestDir: "{app}"; Flags: ignoreversion
-
 [Icons]
 ; Start Menu shortcuts
 Name: "{group}\{#MyAppName} Documentation"; Filename: "{app}\README.md"

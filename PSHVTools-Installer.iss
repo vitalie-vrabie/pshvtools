@@ -75,6 +75,7 @@ Source: "fix-vhd-acl.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshv
 ; Documentation files - install to application directory
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
 Source: "QUICKSTART.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "BUILD_GUIDE.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "PROJECT_SUMMARY.md"; DestDir: "{app}"; Flags: ignoreversion
@@ -82,6 +83,7 @@ Source: "PROJECT_SUMMARY.md"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 ; Start Menu shortcuts
 Name: "{group}\{#MyAppName} Documentation"; Filename: "{app}\README.md"
+Name: "{group}\Changelog"; Filename: "{app}\CHANGELOG.md"
 Name: "{group}\Quick Start Guide"; Filename: "{app}\QUICKSTART.md"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 

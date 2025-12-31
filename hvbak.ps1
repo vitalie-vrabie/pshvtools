@@ -550,7 +550,12 @@ foreach ($vm in $vms) {
                                 $currentProgress = [int]$Matches[1]
                                 # Only log progress in 10% increments to reduce output spam
                                 if ($currentProgress -ge ($lastProgress + 10)) {
-                                    LocalLog ("[7z] Archiving progress: {0}%" -f $currentProgress)
+                                    $archiveLeafForProgress = if ($tempArchive) { Split-Path -Path $tempArchive -Leaf } else { "" }
+                                    if ($archiveLeafForProgress) {
+                                        LocalLog ("[7z] {0}: Archiving progress: {1}%" -f $archiveLeafForProgress, $currentProgress)
+                                    } else {
+                                        LocalLog ("[7z] Archiving progress: {0}%" -f $currentProgress)
+                                    }
                                     $lastProgress = $currentProgress
                                 }
                             }

@@ -794,6 +794,39 @@ foreach ($vm in $vms) {
                     }
                 }
 
+                # Ensure the archive created in this run is included even if directory enumeration lags.
+                try {
+                    if ($result.DestArchive) {
+                        $explicitPath = [string]$result.DestArchive
+                        if ($explicitPath -and (Test-Path -LiteralPath $explicitPath)) {
+                            $explicitLeaf = Split-Path -Path $explicitPath -Leaf
+                            if ($explicitLeaf -match $vmArchiveRegex) {
+                                $explicitTs = (Get-Item -LiteralPath $explicitPath -ErrorAction SilentlyContinue).LastWriteTime
+                                try {
+                                    $explicitTs = [datetime]::ParseExact($Matches[1], 'yyyyMMddHHmmss', $null)
+                                } catch { }
+
+                                $explicitFolder = Split-Path -Path $explicitPath -Parent
+                                $explicitDateFolder = Split-Path -Path $explicitFolder -Leaf
+
+                                if (-not ($allVmArchives | Where-Object { $_.Path -eq $explicitPath })) {
+                                    $allVmArchives += [PSCustomObject]@{
+                                        Path       = $explicitPath
+                                        Name       = $explicitLeaf
+                                        DateFolder = $explicitDateFolder
+                                        FolderPath = $explicitFolder
+                                        SortKey    = $explicitTs
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch {
+                }
+
+                # Deduplicate by path (can happen if explicit add also appeared in enumeration)
+                $allVmArchives = @($allVmArchives | Sort-Object Path -Unique)
+
                 if ($allVmArchives.Count -gt $KeepCount) {
                     $sorted = $allVmArchives | Sort-Object SortKey -Descending
                     $keepArchives = $sorted | Select-Object -First $KeepCount

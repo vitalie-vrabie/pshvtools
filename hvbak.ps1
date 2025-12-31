@@ -14,6 +14,7 @@
     - Implements graceful cleanup in a finally block: removes checkpoints, restarts VMs, and cleans up incomplete exports even if the export is cancelled via Hyper-V Manager or Ctrl+C.
     - All output from background jobs is streamed to the parent script via PowerShell pipelines (Receive-Job); no log files are created on disk.
     - Supports Ctrl+C cancellation: stops all background jobs, kills related 7z.exe processes, and removes temp contents.
+    - Supports optional 7-Zip thread capping via ThreadCap (uses 7z -mmt=<n>).
 
 .PARAMETER NamePattern
   Wildcard pattern to match VM names (e.g., "*" for all VMs, "web-*" for VMs starting with "web-").
@@ -33,6 +34,11 @@
 .PARAMETER KeepCount
   Number of backup copies to keep per VM (older backups are deleted). Default: 2
 
+.PARAMETER ThreadCap
+  Optional maximum number of CPU threads for 7-Zip compression.
+  When specified, the script passes "-mmt=<ThreadCap>" to 7z.exe.
+  When omitted, 7-Zip decides automatically ("-mmt=on").
+
 .EXAMPLE
   .\vmbak.ps1 -NamePattern "*"
   Exports all VMs to %USERPROFILE%\hvbak-archives\YYYYMMDD using default temp folder
@@ -48,6 +54,10 @@
 .EXAMPLE
   .\vmbak.ps1 -NamePattern "web-*" -KeepCount 5
   Exports VMs matching "web-*" and keeps the 5 most recent backups, deleting older ones.
+
+.EXAMPLE
+  .\vmbak.ps1 -NamePattern "*" -ThreadCap 4
+  Exports all VMs and caps 7-Zip compression to 4 threads.
 
 .NOTES
   - Run elevated (Administrator) on the Hyper-V host for best results.
@@ -76,7 +86,11 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateRange(1, 100)]
-    [int]$KeepCount = 2
+    [int]$KeepCount = 2,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateRange(1, 1024)]
+    [int]$ThreadCap
 )
 
 # Display help if no NamePattern provided
@@ -153,9 +167,9 @@ foreach ($vm in $vms) {
 
     Log ("Starting per-vm job for: {0}" -f $vmName)
 
-    $perVmJob = Start-Job -ArgumentList $vmName, $safeVmName, $DateDestination, $TempRoot, $sevenZip, $ForceTurnOff, $GuestCredential, $PollIntervalSeconds, $ShutdownTimeoutSeconds, $KeepCount, $CancelSentinel -ScriptBlock {
+    $perVmJob = Start-Job -ArgumentList $vmName, $safeVmName, $DateDestination, $TempRoot, $sevenZip, $ForceTurnOff, $GuestCredential, $PollIntervalSeconds, $ShutdownTimeoutSeconds, $KeepCount, $CancelSentinel, $ThreadCap -ScriptBlock {
         param(
-            $vmName, $safeVmName, $DateDestination, $TempRoot, $sevenZip, $ForceTurnOff, $GuestCredential, $PollIntervalSeconds, $ShutdownTimeoutSeconds, $KeepCount, $CancelSentinel
+            $vmName, $safeVmName, $DateDestination, $TempRoot, $sevenZip, $ForceTurnOff, $GuestCredential, $PollIntervalSeconds, $ShutdownTimeoutSeconds, $KeepCount, $CancelSentinel, $ThreadCap
         )
 
         # Set up a trap to catch job stopping/termination
@@ -492,7 +506,8 @@ foreach ($vm in $vms) {
                 LocalLog ("Creating 7z archive: {0} -> {1}" -f $vmTemp, $tempArchive)
                 # Use 7z format with fast compression and multithreading
                 # Add -bsp1 to get progress percentage updates
-                $args = @("a","-t7z","-mx=1","-mmt=on","-bsp1",$tempArchive,"*")
+                $mmtArg = if ($ThreadCap -and $ThreadCap -gt 0) { "-mmt=$ThreadCap" } else { "-mmt=on" }
+                $args = @("a","-t7z","-mx=1",$mmtArg,"-bsp1",$tempArchive,"*")
 
                 # Start 7z as a separate process with redirected output to capture progress
                 $proc = $null

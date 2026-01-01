@@ -208,6 +208,25 @@ function Resolve-LatestBackup {
     }
 
     $latest = $matches | Sort-Object SortKey -Descending | Select-Object -First 1
+
+    # Fallback: if no YYYYMMDD folders exist (or none matched), look directly under BackupRoot
+    if (-not $latest) {
+        $files = Get-ChildItem -LiteralPath $BackupRoot -File -Filter '*.7z' -ErrorAction SilentlyContinue
+        $matches = foreach ($f in $files) {
+            if ($f.Name -match $archiveRegex) {
+                $dt = $f.LastWriteTime
+                try { $dt = [datetime]::ParseExact($Matches[1], 'yyyyMMddHHmmss', $null) } catch {}
+
+                [PSCustomObject]@{
+                    FullName = $f.FullName
+                    SortKey  = $dt
+                }
+            }
+        }
+
+        $latest = $matches | Sort-Object SortKey -Descending | Select-Object -First 1
+    }
+
     if (-not $latest) {
         throw "No backups found for VM '$VmName' under '$BackupRoot'."
     }

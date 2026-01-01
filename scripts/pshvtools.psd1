@@ -20,7 +20,7 @@ Author = 'Vitalie Vrabie'
 CompanyName = 'PSHVTools'
 
 # Copyright statement for this module
-Copyright = '(c) 2025 Vitalie Vrabie. All rights reserved.'
+Copyright = '(c) 2026 Vitalie Vrabie. All rights reserved.'
 
 # Description of the functionality provided by this module
 Description = 'PSHVTools - PowerShell tools for backing up Hyper-V VMs using checkpoints and 7-Zip compression'
@@ -32,7 +32,7 @@ PowerShellVersion = '5.1'
 RequiredModules = @('Hyper-V')
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = @('Invoke-VMBackup', 'Repair-VhdAcl')
+FunctionsToExport = @('Invoke-VMBackup', 'Repair-VhdAcl', 'Restore-VMBackup')
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()
@@ -41,7 +41,7 @@ CmdletsToExport = @()
 VariablesToExport = @()
 
 # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
-AliasesToExport = @('hvbak', 'hv-bak', 'fix-vhd-acl')
+AliasesToExport = @('hvbak', 'hv-bak', 'fix-vhd-acl', 'hvrestore')
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
 PrivateData = @{

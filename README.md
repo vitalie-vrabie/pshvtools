@@ -255,22 +255,6 @@ hv-bak -NamePattern "srv-*" -Destination "D:\Backups"
 hvbak -NamePattern "web-*" -KeepCount 5
 ```
 
-### Repair-VhdAcl (alias: fix-vhd-acl)
-Repairs file permissions on VHD/VHDX files for Hyper-V access.
-
-**Parameters:**
-- `WhatIf` - Preview changes without applying them
-- `VhdFolder` - Path to folder with VHD/VHDX files
-- `VhdListCsv` - CSV file with VHD paths
-- `LogFile` - Log file path (default: `$env:TEMP\FixVhdAcl.log`)
-
-**Examples:**
-```powershell
-fix-vhd-acl -WhatIf
-fix-vhd-acl
-Repair-VhdAcl -VhdFolder "D:\Restores"
-```
-
 ### Restore-VMBackup (alias: hvrestore)
 Restores a VM from an `hvbak` `.7z` archive by extracting to a staging folder and importing into Hyper-V.
 
@@ -292,6 +276,22 @@ hvrestore -BackupPath "D:\hvbak-archives\20260101\MyVM_20260101123456.7z" `
 
 # Restore the latest backup for a VM
 Restore-VMBackup -VmName "MyVM" -BackupRoot "D:\hvbak-archives" -Latest -NoNetwork -Force
+```
+
+### Repair-VhdAcl (alias: fix-vhd-acl)
+Repairs file permissions on VHD/VHDX files for Hyper-V access.
+
+**Parameters:**
+- `WhatIf` - Preview changes without applying them
+- `VhdFolder` - Path to folder with VHD/VHDX files
+- `VhdListCsv` - CSV file with VHD paths
+- `LogFile` - Log file path (default: `$env:TEMP\FixVhdAcl.log`)
+
+**Examples:**
+```powershell
+fix-vhd-acl -WhatIf
+fix-vhd-acl
+Repair-VhdAcl -VhdFolder "D:\Restores"
 ```
 
 ---

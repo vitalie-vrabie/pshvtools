@@ -171,9 +171,10 @@ if not defined APP_VERSION (
 )
 
 set "EXE_FILE=%REPO_ROOT%\dist\PSHVTools-Setup-%APP_VERSION%.exe"
+set "EXE_FILE_Q=%EXE_FILE%"
 
-if exist "%EXE_FILE%" (
-    for %%A in ("%EXE_FILE%") do set "FILE_SIZE=%%~zA"
+if exist "%EXE_FILE_Q%" (
+    for %%A in ("%EXE_FILE_Q%") do set "FILE_SIZE=%%~zA"
     set /a "FILE_SIZE_KB=!FILE_SIZE! / 1024"
     set /a "FILE_SIZE_MB=!FILE_SIZE! / 1048576"
 
@@ -194,7 +195,7 @@ if exist "%EXE_FILE%" (
 ) else (
     echo.
     echo [WARNING] Build succeeded but expected output was not found:
-    echo   %EXE_FILE%
+    echo   %EXE_FILE_Q%
 )
 
 echo.

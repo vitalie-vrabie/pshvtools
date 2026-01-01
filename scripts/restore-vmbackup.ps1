@@ -239,14 +239,47 @@ function Expand-BackupArchive {
 function Find-ExportRoot {
     param([Parameter(Mandatory = $true)][string]$StagingDir)
 
-    $vmcx = Get-ChildItem -LiteralPath $StagingDir -Recurse -File -Filter '*.vmcx' -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($vmcx) { return $vmcx.Directory.FullName }
+    if (-not (Test-Path -LiteralPath $StagingDir)) {
+        throw "Staging directory not found: $StagingDir"
+    }
 
-    $xml = Get-ChildItem -LiteralPath $StagingDir -Recurse -File -Filter '*.xml' -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -ieq 'Virtual Machines.xml' -or $_.Name -like '*.xml' } |
+    # Hyper-V export structure is typically:
+    # <ExportRoot>\Virtual Machines\*.vmcx
+    # <ExportRoot>\Virtual Hard Disks\*.vhdx
+    # <ExportRoot>\Snapshots\...
+    # Import-VM expects -Path to point at <ExportRoot>, not the 'Virtual Machines' subfolder.
+
+    $vmcx = Get-ChildItem -LiteralPath $StagingDir -Recurse -File -Filter '*.vmcx' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($vmcx) {
+        $dir = $vmcx.Directory
+        while ($dir) {
+            $candidate = $dir.FullName
+            if (Test-Path -LiteralPath (Join-Path $candidate 'Virtual Machines')) {
+                return $candidate
+            }
+            $dir = $dir.Parent
+        }
+
+        # Fallback: if we couldn't find an ancestor with 'Virtual Machines', return the vmcx directory.
+        return $vmcx.Directory.FullName
+    }
+
+    $vmXml = Get-ChildItem -LiteralPath $StagingDir -Recurse -File -Filter '*.xml' -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ieq 'Virtual Machines.xml' } |
         Select-Object -First 1
 
-    if ($xml) { return $xml.Directory.FullName }
+    if ($vmXml) {
+        $dir = $vmXml.Directory
+        while ($dir) {
+            $candidate = $dir.FullName
+            if (Test-Path -LiteralPath (Join-Path $candidate 'Virtual Machines')) {
+                return $candidate
+            }
+            $dir = $dir.Parent
+        }
+
+        return $vmXml.Directory.FullName
+    }
 
     throw "Unable to locate a Hyper-V export root in staging directory: $StagingDir"
 }
@@ -302,7 +335,25 @@ function Import-FromExport {
     }
 
     if ($PSCmdlet.ShouldProcess($ExportRoot, "Import VM ($ImportMode)")) {
-        return Import-VM @importParams
+        try {
+            return Import-VM @importParams
+        }
+        catch {
+            # Common failure: passing the 'Virtual Machines' folder instead of export root.
+            # If detected, retry by moving one level up.
+            $maybeVmFolder = $importParams.Path
+            $leaf = Split-Path -Path $maybeVmFolder -Leaf
+            if ($leaf -ieq 'Virtual Machines') {
+                $parent = Split-Path -Path $maybeVmFolder -Parent
+                if ($parent -and (Test-Path -LiteralPath $parent)) {
+                    Write-Log "Import-VM failed for path '$maybeVmFolder'. Retrying with export root: $parent"
+                    $importParams.Path = $parent
+                    return Import-VM @importParams
+                }
+            }
+
+            throw
+        }
     }
 
     return $null

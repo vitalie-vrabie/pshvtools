@@ -43,8 +43,8 @@ InfoBeforeFile=..\QUICKSTART.md
 PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=dialog
 MinVersion=6.1sp1
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 
 ; Uninstall settings
 ; UninstallDisplayIcon={app}\icon.ico (commented out - optional custom icon)
@@ -100,8 +100,6 @@ var
   RequirementsOK: Boolean;
 
 function GetPowerShellVersion(): String;
-var
-  ResultCode: Integer;
 begin
   Result := '5.1';  // Assume minimum version if check fails
   // We'll do a simple check in CheckPowerShellVersion instead
@@ -267,7 +265,7 @@ begin
     '"$ErrorActionPreference=\"Stop\"; ' +
     '$p=\"' + InstallPath + '\"; ' +
     '$files=@(\"pshvtools.psd1\",\"pshvtools.psm1\",\"hvbak.ps1\",\"fix-vhd-acl.ps1\",\"restore-vmbackup.ps1\"); ' +
-    'foreach($f in $files){ $fp=Join-Path $p $f; if(-not (Test-Path -LiteralPath $fp)){ throw \"Missing file: $fp\" } }; ' +
+    'foreach($f in $files){ $fp=Join-Path $p $f; if(-not (Test-Path -LiteralPath $fp)){ throw (\"Missing file: {0}\" -f $fp) } }; ' +
     '$null=[System.Management.Automation.Language.Parser]::ParseFile((Join-Path $p \"restore-vmbackup.ps1\"), [ref]$null, [ref]$null); ' +
     'Import-Module pshvtools -Force -ErrorAction Stop; exit 0"';
 

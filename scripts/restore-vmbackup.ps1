@@ -56,18 +56,17 @@
 
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
 param(
-    [Parameter(Mandatory = $false, ParameterSetName = 'Path')]
+    [Parameter(Mandatory = $false)]
     [string]$BackupPath,
 
-    [Parameter(Mandatory = $true, ParameterSetName = 'Latest')]
-    [ValidateNotNullOrEmpty()]
+    [Parameter(Mandatory = $false)]
     [string]$VmName,
 
-    [Parameter(Mandatory = $false, ParameterSetName = 'Latest')]
+    [Parameter(Mandatory = $false)]
     [ValidateNotNullOrEmpty()]
     [string]$BackupRoot = "$env:USERPROFILE\hvbak-archives",
 
-    [Parameter(Mandatory = $true, ParameterSetName = 'Latest')]
+    [Parameter(Mandatory = $false)]
     [switch]$Latest,
 
     [Parameter(Mandatory = $false)]
@@ -106,8 +105,11 @@ if ($PSBoundParameters.Count -eq 0) {
     return
 }
 
-if ($Latest -and [string]::IsNullOrWhiteSpace($VmName)) {
-    throw "VmName is required when using -Latest. Example: hvrestore -VmName 'MyVM' -Latest"
+# Implicitly use -Latest when VmName is provided and BackupPath is not.
+$useLatest = $Latest -or (-not [string]::IsNullOrWhiteSpace($VmName) -and [string]::IsNullOrWhiteSpace($BackupPath))
+
+if ($useLatest -and [string]::IsNullOrWhiteSpace($VmName)) {
+    throw "VmName is required to select the latest archive. Example: hvrestore -VmName 'MyVM' [-Latest]"
 }
 
 function Write-Log {
@@ -314,12 +316,12 @@ try {
         throw "7-Zip (7z.exe) not found. Install 7-Zip or ensure 7z.exe is in PATH."
     }
 
-    if ($PSCmdlet.ParameterSetName -eq 'Latest') {
+    if ($useLatest) {
         $BackupPath = Resolve-LatestBackup -VmName $VmName -BackupRoot $BackupRoot
     }
 
-    if (-not $BackupPath) {
-        throw "BackupPath is required."
+    if ([string]::IsNullOrWhiteSpace($BackupPath)) {
+        throw "BackupPath is required. Specify -BackupPath, or specify -VmName to restore the latest backup."
     }
 
     $BackupPath = (Resolve-Path -LiteralPath $BackupPath).Path

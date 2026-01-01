@@ -226,27 +226,27 @@ function Restore-VMBackup {
 
     .DESCRIPTION
       Wrapper around restore-vmbackup.ps1.
-      Use -BackupPath to restore a specific archive, or -VmName/-Latest to restore the most recent archive.
+      Use -BackupPath to restore a specific archive, or -VmName to restore the most recent archive for that VM.
 
     .EXAMPLE
       Restore-VMBackup -BackupPath "D:\hvbak-archives\20260101\MyVM_20260101123456.7z" -ImportMode Copy -VmStorageRoot "D:\Hyper-V"
 
     .EXAMPLE
-      hvrestore -VmName "MyVM" -BackupRoot "D:\hvbak-archives" -Latest -VSwitchName "vSwitch" -StartAfterRestore
+      hvrestore -VmName "MyVM" -BackupRoot "D:\hvbak-archives" -VSwitchName "vSwitch" -StartAfterRestore
     #>
 
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     param(
-        [Parameter(Mandatory = $false, ParameterSetName = 'Path')]
+        [Parameter(Mandatory = $false)]
         [string]$BackupPath,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'Latest')]
+        [Parameter(Mandatory = $false)]
         [string]$VmName,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'Latest')]
+        [Parameter(Mandatory = $false)]
         [string]$BackupRoot = "$env:USERPROFILE\hvbak-archives",
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'Latest')]
+        [Parameter(Mandatory = $false)]
         [switch]$Latest,
 
         [Parameter(Mandatory = $false)]
@@ -275,14 +275,15 @@ function Restore-VMBackup {
         [switch]$KeepStaging
     )
 
-    # Show help and return if no parameters are provided
     if ($PSBoundParameters.Count -eq 0) {
         Get-Help Restore-VMBackup -Full
         return
     }
 
-    if ($Latest -and [string]::IsNullOrWhiteSpace($VmName)) {
-        Write-Error "VmName is required when using -Latest. Example: hvrestore -VmName 'MyVM' -Latest"
+    $useLatest = $Latest -or (-not [string]::IsNullOrWhiteSpace($VmName) -and [string]::IsNullOrWhiteSpace($BackupPath))
+
+    if ($useLatest -and [string]::IsNullOrWhiteSpace($VmName)) {
+        Write-Error "VmName is required to select the latest archive. Example: hvrestore -VmName 'MyVM' [-Latest]"
         return
     }
 
@@ -293,6 +294,10 @@ function Restore-VMBackup {
     }
 
     $params = @{
+        BackupPath = $BackupPath
+        VmName = $VmName
+        BackupRoot = $BackupRoot
+        Latest = $useLatest
         StagingRoot = $StagingRoot
         VmStorageRoot = $VmStorageRoot
         ImportMode = $ImportMode
@@ -301,14 +306,6 @@ function Restore-VMBackup {
         Force = $Force
         StartAfterRestore = $StartAfterRestore
         KeepStaging = $KeepStaging
-    }
-
-    if ($PSCmdlet.ParameterSetName -eq 'Latest') {
-        $params.VmName = $VmName
-        $params.BackupRoot = $BackupRoot
-        $params.Latest = $true
-    } else {
-        $params.BackupPath = $BackupPath
     }
 
     & $scriptPath @params

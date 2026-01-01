@@ -99,6 +99,9 @@ param(
 
 Set-StrictMode -Version Latest
 
+# Ensure variables referenced in finally are defined even if we fail early under StrictMode
+$stagingDir = $null
+
 # Display help if no parameters provided
 if ($PSBoundParameters.Count -eq 0) {
     Get-Help $MyInvocation.MyCommand.Path -Full
@@ -179,7 +182,7 @@ function Resolve-LatestBackup {
     )
 
     if (-not (Test-Path -LiteralPath $BackupRoot)) {
-        throw "BackupRoot not found: $BackupRoot"
+        throw "BackupRoot not found: $BackupRoot. Specify -BackupRoot to point to the folder that contains the YYYYMMDD backup folders."
     }
 
     $safeVmName = $VmName -replace '[\\/:*?"<>|]', '_'

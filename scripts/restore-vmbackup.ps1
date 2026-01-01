@@ -309,6 +309,61 @@ function Remove-ExistingVmIfNeeded {
     }
 }
 
+function Get-ImportCandidates {
+    param(
+        [Parameter(Mandatory = $true)][string]$ExportRoot
+    )
+
+    $candidates = New-Object System.Collections.Generic.List[string]
+
+    # 1) As-is
+    if ($ExportRoot) { $candidates.Add($ExportRoot) }
+
+    # 2) If export root contains "Virtual Machines" folder, keep it as candidate (some layouts work with root)
+    $vmFolder = Join-Path -Path $ExportRoot -ChildPath 'Virtual Machines'
+    if (Test-Path -LiteralPath $vmFolder) { $candidates.Add($vmFolder) }
+
+    # 3) If ExportRoot itself is a dated staging dir containing a per-VM folder,
+    # support nested export roots like: <staging>\<vmname>\Virtual Machines\*.vmcx
+    try {
+        $childVmFolders = Get-ChildItem -LiteralPath $ExportRoot -Directory -ErrorAction SilentlyContinue
+        foreach ($d in $childVmFolders) {
+            $nestedVmFolder = Join-Path -Path $d.FullName -ChildPath 'Virtual Machines'
+            if (Test-Path -LiteralPath $nestedVmFolder) {
+                $candidates.Add($d.FullName)
+                $candidates.Add($nestedVmFolder)
+            }
+        }
+    } catch {}
+
+    # de-dup, preserve order
+    $seen = @{}
+    $out = @()
+    foreach ($c in $candidates) {
+        if (-not $c) { continue }
+        $p = $c.TrimEnd('\\')
+        if (-not $seen.ContainsKey($p)) {
+            $seen[$p] = $true
+            $out += $p
+        }
+    }
+
+    return $out
+}
+
+function Test-ImportPath {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    try {
+        # Compare-VM validates the path layout without importing.
+        # It returns a VMCompatibilityReport when the path is recognized.
+        $null = Compare-VM -Path $Path -ErrorAction Stop
+        return $true
+    } catch {
+        return $false
+    }
+}
+
 function Import-FromExport {
     param(
         [Parameter(Mandatory = $true)][string]$ExportRoot,
@@ -334,29 +389,37 @@ function Import-FromExport {
         }
     }
 
-    if ($PSCmdlet.ShouldProcess($ExportRoot, "Import VM ($ImportMode)")) {
-        try {
-            return Import-VM @importParams
-        }
-        catch {
-            # Common failure: passing the 'Virtual Machines' folder instead of export root.
-            # If detected, retry by moving one level up.
-            $maybeVmFolder = $importParams.Path
-            $leaf = Split-Path -Path $maybeVmFolder -Leaf
-            if ($leaf -ieq 'Virtual Machines') {
-                $parent = Split-Path -Path $maybeVmFolder -Parent
-                if ($parent -and (Test-Path -LiteralPath $parent)) {
-                    Write-Log "Import-VM failed for path '$maybeVmFolder'. Retrying with export root: $parent"
-                    $importParams.Path = $parent
-                    return Import-VM @importParams
-                }
-            }
+    if (-not $PSCmdlet.ShouldProcess($ExportRoot, "Import VM ($ImportMode)")) {
+        return $null
+    }
 
-            throw
+    $candidates = Get-ImportCandidates -ExportRoot $ExportRoot
+
+    # Prefer candidates that Compare-VM recognizes
+    $validated = @()
+    foreach ($c in $candidates) {
+        if (Test-ImportPath -Path $c) {
+            $validated += $c
+        }
+    }
+    if ($validated.Count -gt 0) {
+        $candidates = $validated
+    }
+
+    $lastErr = $null
+    foreach ($path in $candidates) {
+        try {
+            Write-Log "Attempting Import-VM from: $path"
+            $importParams.Path = $path
+            return Import-VM @importParams
+        } catch {
+            $lastErr = $_
+            Write-Log "Import-VM failed for path '$path': $($_.Exception.Message)"
         }
     }
 
-    return $null
+    if ($lastErr) { throw $lastErr }
+    throw "Import-VM failed. No candidate import paths were found under: $ExportRoot"
 }
 
 function Configure-Network {

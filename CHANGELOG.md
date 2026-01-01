@@ -13,6 +13,13 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ### Changed
 - Retention cleanup explicitly includes the freshly created archive in the per-VM archive list before counting/sorting/deleting.
 
+## [1.0.2] - 2026-03-15
+
+### Changed
+- Restore: `-Latest` now supports archives stored directly under `BackupRoot` (not only `BackupRoot\\YYYYMMDD`).
+- Restore: Improved `Import-VM` path detection, including GUID subfolders and `.vmcx` candidates, with per-attempt logging.
+- Restore: Fixed StrictMode cleanup issue when failing early (ensures staging variables are defined before `finally`).
+
 ## [1.0.1] - 2025-12-31
 
 ### Added

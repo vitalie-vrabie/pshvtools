@@ -202,7 +202,11 @@ Restores a VM from an `hvbak` `.7z` archive by extracting to a staging folder an
 - `BackupPath` - Path to a `.7z` archive
 - `VmName`, `BackupRoot`, `Latest` - Restore most recent archive for a VM
 - `ImportMode` - `Copy` (default), `Register`, or `Restore`
-- `VmStorageRoot` - Destination root for VM files in `Copy` mode
+- `DestinationRoot` - Single "where should it go" root:
+  - with `ImportMode=Register` (or if `ImportMode` omitted): extract under `DestinationRoot` and register **in-place**
+  - with `ImportMode=Copy`/`Restore`: treated as `VmStorageRoot` (final Hyper-V storage root)
+- `StagingRoot` - Extraction root used when staging is needed (e.g., Copy/Restore)
+- `VmStorageRoot` - Destination root for VM files in `Copy`/`Restore` mode
 - `VSwitchName` - Connect adapters to a switch after import
 - `NoNetwork` - Disconnect adapters after import
 - `Force` - Remove existing VM with the same name before import
@@ -210,12 +214,12 @@ Restores a VM from an `hvbak` `.7z` archive by extracting to a staging folder an
 
 **Examples:**
 ```powershell
-# Restore a specific archive (recommended: Copy + GenerateNewId)
-hvrestore -BackupPath "D:\hvbak-archives\20260101\MyVM_20260101123456.7z" `
-  -ImportMode Copy -VmStorageRoot "D:\Hyper-V" -VSwitchName "vSwitch" -StartAfterRestore
+# In-place restore into a specific folder (extract + register from DestinationRoot)
+hvrestore -VmName "MyVM" -BackupRoot "D:\hvbak-archives" -Latest -DestinationRoot "D:\RestoredVMs" -NoNetwork
 
-# Restore the latest backup for a VM
-Restore-VMBackup -VmName "MyVM" -BackupRoot "D:\hvbak-archives" -Latest -NoNetwork -Force
+# Restore a specific archive (recommended: Copy + GenerateNewId) to a specific Hyper-V storage root
+hvrestore -BackupPath "D:\hvbak-archives\20260101\MyVM_20260101123456.7z" `
+  -ImportMode Copy -DestinationRoot "D:\Hyper-V" -VSwitchName "vSwitch" -StartAfterRestore
 ```
 
 ### Restore-OrphanedVMs (alias: hvrecover)

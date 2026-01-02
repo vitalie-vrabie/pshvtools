@@ -229,10 +229,12 @@ function Restore-VMBackup {
       Use -BackupPath to restore a specific archive, or -VmName to restore the most recent archive for that VM.
 
     .EXAMPLE
-      Restore-VMBackup -BackupPath "D:\hvbak-archives\20260101\MyVM_20260101123456.7z" -ImportMode Copy -VmStorageRoot "D:\Hyper-V"
+      # Copy restore into a specific Hyper-V storage root
+      Restore-VMBackup -BackupPath "D:\hvbak-archives\20260101\MyVM_20260101123456.7z" -ImportMode Copy -DestinationRoot "D:\Hyper-V"
 
     .EXAMPLE
-      hvrestore -VmName "MyVM" -BackupRoot "D:\hvbak-archives" -VSwitchName "vSwitch" -StartAfterRestore
+      # In-place restore into a specific folder (extract + register)
+      hvrestore -VmName "MyVM" -BackupRoot "D:\hvbak-archives" -Latest -DestinationRoot "D:\RestoredVMs" -NoNetwork
     #>
 
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
@@ -254,6 +256,9 @@ function Restore-VMBackup {
 
         [Parameter(Mandatory = $false)]
         [string]$VmStorageRoot = "$env:ProgramData\Microsoft\Windows\Hyper-V",
+
+        [Parameter(Mandatory = $false)]
+        [string]$DestinationRoot,
 
         [Parameter(Mandatory = $false)]
         [ValidateSet('Copy', 'Register', 'Restore')]
@@ -303,6 +308,7 @@ function Restore-VMBackup {
 
     if ($PSBoundParameters.ContainsKey('StagingRoot')) { $params.StagingRoot = $StagingRoot }
     if ($PSBoundParameters.ContainsKey('VmStorageRoot')) { $params.VmStorageRoot = $VmStorageRoot }
+    if ($PSBoundParameters.ContainsKey('DestinationRoot')) { $params.DestinationRoot = $DestinationRoot }
     if ($PSBoundParameters.ContainsKey('ImportMode')) { $params.ImportMode = $ImportMode }
     if ($PSBoundParameters.ContainsKey('VSwitchName')) { $params.VSwitchName = $VSwitchName }
 

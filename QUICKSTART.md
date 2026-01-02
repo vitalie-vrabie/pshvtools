@@ -181,11 +181,14 @@ The `fix-vhd-acl` command:
 ### Basic Usage
 
 ```powershell
-# Restore from a specific archive
-hvrestore -BackupPath "D:\backups\20260101\MyVM_20260101123456.7z" -ImportMode Copy -VmStorageRoot "D:\Hyper-V"
+# Restore from a specific archive (copy into Hyper-V storage)
+hvrestore -BackupPath "D:\backups\20260101\MyVM_20260101123456.7z" -ImportMode Copy -DestinationRoot "D:\Hyper-V"
 
 # Restore latest backup for a VM
 hvrestore -VmName "MyVM" -BackupRoot "D:\backups" -Latest
+
+# In-place restore (extract + register from DestinationRoot)
+hvrestore -VmName "MyVM" -BackupRoot "D:\backups" -Latest -DestinationRoot "D:\RestoredVMs" -NoNetwork
 ```
 
 ### Common Options
@@ -202,9 +205,14 @@ hvrestore -VmName "MyVM" -BackupRoot "D:\backups" -Latest -Force
 ```
 
 **ImportMode notes:**
-- `Copy` (default): safest for test restores; uses new VM ID and copies files to `VmStorageRoot`.
-- `Register`: registers the extracted VM in-place (no copy).
+- `Copy` (default): safest for test restores; uses new VM ID and copies files to `VmStorageRoot` (or `DestinationRoot` when provided).
+- `Register`: registers the extracted VM in-place (no copy). If `DestinationRoot` is provided (and `ImportMode` is omitted), it defaults to in-place registration.
 - `Restore`: attempts an in-place restore keeping the original VM ID (may conflict if VM already exists).
+
+**DestinationRoot notes:**
+- With `ImportMode=Register` (or omitted ImportMode): extract under `DestinationRoot` and register the VM in-place.
+- With `ImportMode=Copy`/`Restore`: `DestinationRoot` is treated as the final Hyper-V storage root (same as `VmStorageRoot`).
+
 
 ## ?? Recovering Orphaned VMs (re-register)
 

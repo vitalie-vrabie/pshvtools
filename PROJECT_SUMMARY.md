@@ -69,8 +69,11 @@ Import-Module pshvtools
 # backup
 hvbak -NamePattern "*"
 
-# restore latest for a VM
-hvrestore -VmName "MyVM" -Latest -NoNetwork
+# restore latest for a VM (in-place to a specific folder)
+hvrestore -VmName "MyVM" -Latest -DestinationRoot "D:\RestoredVMs" -NoNetwork
+
+# restore latest for a VM (copy into Hyper-V storage root)
+hvrestore -VmName "MyVM" -Latest -ImportMode Copy -DestinationRoot "D:\Hyper-V" -NoNetwork
 
 # recover orphaned VMs (preview)
 hvrecover -WhatIf

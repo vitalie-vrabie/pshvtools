@@ -104,6 +104,28 @@ Set-StrictMode -Version Latest
 # Ensure variables referenced in finally are defined even if we fail early under StrictMode
 $stagingDir = $null
 
+# Ctrl+C cancellation support
+$script:RestoreCancelled = $false
+$script:SevenZipProcess = $null
+$script:ConsoleCancelHandler = $null
+
+$script:ConsoleCancelHandler = [ConsoleCancelEventHandler]{
+    param($sender, $e)
+    $script:RestoreCancelled = $true
+    $e.Cancel = $true
+
+    try { Write-Host "`n$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))  *** Ctrl+C received: cancelling restore..." } catch {}
+
+    # If 7z extraction is running, kill it so we don't hang waiting for it.
+    try {
+        if ($script:SevenZipProcess -and -not $script:SevenZipProcess.HasExited) {
+            try { $script:SevenZipProcess.Kill() } catch {}
+        }
+    } catch {}
+}
+
+try { [Console]::add_CancelKeyPress($script:ConsoleCancelHandler) } catch {}
+
 # Display help if no parameters provided
 if ($PSBoundParameters.Count -eq 0) {
     Get-Help $MyInvocation.MyCommand.Path -Full
@@ -243,6 +265,10 @@ function Expand-BackupArchive {
         [Parameter(Mandatory = $true)][string]$OutDir
     )
 
+    if ($script:RestoreCancelled) {
+        throw "Operation cancelled by user."
+    }
+
     if (-not (Test-Path -LiteralPath $BackupPath)) {
         throw "Backup archive not found: $BackupPath"
     }
@@ -254,9 +280,20 @@ function Expand-BackupArchive {
     Write-Log "Extracting archive to staging: $OutDir"
 
     $args = @('x', '-y', "-o$OutDir", $BackupPath)
-    $p = Start-Process -FilePath $SevenZip -ArgumentList $args -Wait -PassThru -NoNewWindow
-    if ($p.ExitCode -ne 0) {
-        throw "7z extraction failed with exit code $($p.ExitCode)."
+
+    # Use Start-Process without -Wait so Ctrl+C can kill it; then wait in a loop.
+    $script:SevenZipProcess = Start-Process -FilePath $SevenZip -ArgumentList $args -PassThru -NoNewWindow
+
+    while (-not $script:SevenZipProcess.HasExited) {
+        if ($script:RestoreCancelled) {
+            try { if (-not $script:SevenZipProcess.HasExited) { $script:SevenZipProcess.Kill() } } catch {}
+            throw "Operation cancelled by user."
+        }
+        Start-Sleep -Milliseconds 200
+    }
+
+    if ($script:SevenZipProcess.ExitCode -ne 0) {
+        throw "7z extraction failed with exit code $($script:SevenZipProcess.ExitCode)."
     }
 }
 
@@ -504,6 +541,8 @@ function Configure-Network {
 }
 
 try {
+    if ($script:RestoreCancelled) { throw "Operation cancelled by user." }
+
     Assert-Admin
 
     Import-Module Hyper-V -ErrorAction Stop
@@ -581,6 +620,17 @@ try {
     Write-Log "Restore completed."
 }
 finally {
+    try {
+        if ($script:ConsoleCancelHandler) {
+            [Console]::remove_CancelKeyPress($script:ConsoleCancelHandler)
+        }
+    } catch {}
+
+    # If cancelled, skip aggressive cleanup to avoid hangs (best-effort only)
+    if ($script:RestoreCancelled) {
+        try { Write-Log "Restore cancelled by user." } catch {}
+    }
+
     if (-not $KeepStaging) {
         try {
             if ($stagingDir -and (Test-Path -LiteralPath $stagingDir)) {

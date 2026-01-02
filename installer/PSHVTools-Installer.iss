@@ -260,15 +260,17 @@ var
 begin
   InstallPath := ExpandConstant('{commonpf64}\\WindowsPowerShell\\Modules\\pshvtools');
 
+  // Robust verification: check required files exist, ensure restore-vmbackup.ps1 parses, then import module.
+  // Keep quoting simple by using single quotes inside PowerShell where possible.
   PsArgs :=
     '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command ' +
-    '"$ErrorActionPreference=\"Stop\"; ' +
-    '$p=\"' + InstallPath + '\"; ' +
-    '$files=@(\"pshvtools.psd1\",\"pshvtools.psm1\",\"hvbak.ps1\",\"fix-vhd-acl.ps1\",\"restore-vmbackup.ps1\"); ' +
-    'foreach($f in $files){ $fp=Join-Path $p $f; if(-not (Test-Path -LiteralPath $fp)){ throw (\"Missing file: {0}\" -f $fp) } }; ' +
+    '"$ErrorActionPreference=''Stop''; ' +
+    '$p=''' + InstallPath + '''; ' +
+    '$files=@(''pshvtools.psd1'',''pshvtools.psm1'',''hvbak.ps1'',''fix-vhd-acl.ps1'',''restore-vmbackup.ps1''); ' +
+    'foreach($f in $files){ $fp=Join-Path $p $f; if(-not (Test-Path -LiteralPath $fp)){ throw (''Missing file: {0}'' -f $fp) } }; ' +
     '$tokens=$null; $errors=$null; ' +
-    '$null=[System.Management.Automation.Language.Parser]::ParseFile((Join-Path $p \"restore-vmbackup.ps1\"), [ref]$tokens, [ref]$errors); ' +
-    'if($errors -and $errors.Count -gt 0){ $msg=($errors | Format-List * | Out-String); throw (\"restore-vmbackup.ps1 parse errors:`n{0}\" -f $msg) }; ' +
+    '[System.Management.Automation.Language.Parser]::ParseFile((Join-Path $p ''restore-vmbackup.ps1''), [ref]$tokens, [ref]$errors) | Out-Null; ' +
+    'if($errors -and $errors.Count -gt 0){ throw (''restore-vmbackup.ps1 parse errors:'' + [Environment]::NewLine + (($errors | Format-List * | Out-String))) }; ' +
     'Import-Module pshvtools -Force -ErrorAction Stop; exit 0"';
 
   Result := Exec('powershell.exe', PsArgs, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);

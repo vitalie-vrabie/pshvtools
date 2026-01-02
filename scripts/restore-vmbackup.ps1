@@ -295,7 +295,8 @@ function Expand-BackupArchive {
 
     Write-Log "Extracting archive to staging: $OutDir"
 
-    $args = @('x', '-y', "-o$OutDir", $BackupPath)
+    # -bsp1 prints progress to stdout (percent), which we can stream for a better UX.
+    $args = @('x', '-y', '-bsp1', "-o$OutDir", $BackupPath)
     $argString = ($args | ForEach-Object { if ($_ -match '\\s') { '"' + $_ + '"' } else { $_ } }) -join ' '
 
     $logPath = Join-Path -Path $OutDir -ChildPath '7z-extract.log'
@@ -330,35 +331,62 @@ function Expand-BackupArchive {
 
         $script:SevenZipProcess = $proc
 
-        # Read streams synchronously on background tasks to avoid deadlocks with BeginOutputReadLine.
-        $outTask = [System.Threading.Tasks.Task[string]]::Run([Func[string]]{ $proc.StandardOutput.ReadToEnd() })
-        $errTask = [System.Threading.Tasks.Task[string]]::Run([Func[string]]{ $proc.StandardError.ReadToEnd() })
+        $lastPct = -1
+        $archiveLeaf = Split-Path -Path $BackupPath -Leaf
 
+        # Stream stdout to log and show coarse progress in console.
         while (-not $proc.HasExited) {
             if ($script:RestoreCancelled) {
                 try { if (-not $proc.HasExited) { $proc.Kill() } } catch {}
                 throw "Operation cancelled by user."
             }
-            Start-Sleep -Milliseconds 200
+
+            try {
+                while (-not $proc.StandardOutput.EndOfStream) {
+                    $line = $proc.StandardOutput.ReadLine()
+                    if ($null -ne $line -and $line.Length -gt 0) {
+                        try { $logWriter.WriteLine($line) } catch {}
+
+                        # 7z typically emits lines like: " 23%" when -bsp1 is used.
+                        if ($line -match '^\s*(\d+)%') {
+                            $pct = [int]$Matches[1]
+                            if ($pct -ge ($lastPct + 5)) {
+                                Write-Log ("[7z] {0}: Extracting {1}%" -f $archiveLeaf, $pct)
+                                $lastPct = $pct
+                            }
+                        }
+                    }
+                }
+
+                # Avoid busy looping if 7z is quiet
+                Start-Sleep -Milliseconds 200
+            } catch {
+                # If stream read throws, break and let exit code handling decide.
+                break
+            }
         }
 
-        # Ensure process + stream reads complete
-        try { $proc.WaitForExit() } catch {}
-        try { $outTask.Wait() } catch {}
-        try { $errTask.Wait() } catch {}
+        # Drain remaining output
+        try {
+            while (-not $proc.StandardOutput.EndOfStream) {
+                $line = $proc.StandardOutput.ReadLine()
+                if ($line) { $logWriter.WriteLine($line) }
+            }
+        } catch {}
 
-        $stdout = $null
         $stderr = $null
-        try { $stdout = $outTask.Result } catch {}
-        try { $stderr = $errTask.Result } catch {}
-
-        if ($stdout) { $logWriter.WriteLine($stdout) }
+        try { $stderr = $proc.StandardError.ReadToEnd() } catch {}
         if ($stderr) { $logWriter.WriteLine($stderr) }
+
         $logWriter.Flush()
 
         $exitCode = $proc.ExitCode
         if ($exitCode -ne 0) {
             throw "7z extraction failed with exit code $exitCode. FilePath='$SevenZip' Args=$argString Log='$logPath'"
+        }
+
+        if ($lastPct -lt 100) {
+            Write-Log ("[7z] {0}: Extracting 100%" -f $archiveLeaf)
         }
     }
     finally {

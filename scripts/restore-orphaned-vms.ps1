@@ -53,7 +53,7 @@
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
 param(
     [Parameter(Mandatory = $false)]
-    [string[]]$VmConfigRoot = @("$env:ProgramData\Microsoft\Windows\Hyper-V"),
+    [string[]]$VmConfigRoot = @("$env:ProgramData\Microsoft\Windows\Hyper-V\Virtual Machines"),
 
     [Parameter(Mandatory = $false)]
     [switch]$IncludeXml,
@@ -136,6 +136,35 @@ function Get-OrphanCandidates {
     $files | Sort-Object FullName -Unique
 }
 
+function Resolve-ConfigRoots {
+    param([Parameter(Mandatory = $true)][string[]]$Roots)
+
+    $out = New-Object System.Collections.Generic.List[string]
+
+    foreach ($r in $Roots) {
+        if ([string]::IsNullOrWhiteSpace($r)) { continue }
+
+        $resolved = $r
+        try {
+            if (Test-Path -LiteralPath $r) {
+                $resolved = (Resolve-Path -LiteralPath $r -ErrorAction Stop).Path
+            }
+        } catch {}
+
+        # If the user passed the Hyper-V root (e.g. ...\Hyper-V), prefer its 'Virtual Machines' subfolder.
+        try {
+            $vmSub = Join-Path -Path $resolved -ChildPath 'Virtual Machines'
+            if ((Split-Path -Path $resolved -Leaf) -ne 'Virtual Machines' -and (Test-Path -LiteralPath $vmSub)) {
+                $resolved = $vmSub
+            }
+        } catch {}
+
+        $out.Add($resolved)
+    }
+
+    $out | Sort-Object -Unique
+}
+
 Assert-Admin
 Import-Module Hyper-V -ErrorAction Stop
 
@@ -145,6 +174,7 @@ foreach ($vm in $registered) {
     try { $registeredIds[$vm.Id.Guid.ToString().ToLowerInvariant()] = $true } catch {}
 }
 
+$VmConfigRoot = Resolve-ConfigRoots -Roots $VmConfigRoot
 $candidates = Get-OrphanCandidates -Roots $VmConfigRoot -IncludeXml:$IncludeXml
 
 if (-not $candidates -or $candidates.Count -eq 0) {

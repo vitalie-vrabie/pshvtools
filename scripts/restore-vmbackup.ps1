@@ -296,9 +296,19 @@ function Expand-BackupArchive {
     Write-Log "Extracting archive to staging: $OutDir"
 
     $args = @('x', '-y', "-o$OutDir", $BackupPath)
+    $argString = ($args | ForEach-Object { if ($_ -match '\\s') { '"' + $_ + '"' } else { $_ } }) -join ' '
 
     # Use Start-Process without -Wait so Ctrl+C can kill it; then wait in a loop.
-    $script:SevenZipProcess = Start-Process -FilePath $SevenZip -ArgumentList $args -PassThru -NoNewWindow
+    $script:SevenZipProcess = $null
+    try {
+        $script:SevenZipProcess = Start-Process -FilePath $SevenZip -ArgumentList $args -PassThru -NoNewWindow -ErrorAction Stop
+    } catch {
+        throw "Failed to start 7-Zip process. FilePath='$SevenZip' Args=$argString Error=$($_.Exception.Message)"
+    }
+
+    if (-not $script:SevenZipProcess) {
+        throw "Failed to start 7-Zip process (no process handle returned). FilePath='$SevenZip' Args=$argString"
+    }
 
     while (-not $script:SevenZipProcess.HasExited) {
         if ($script:RestoreCancelled) {
@@ -308,8 +318,18 @@ function Expand-BackupArchive {
         Start-Sleep -Milliseconds 200
     }
 
-    if ($script:SevenZipProcess.ExitCode -ne 0) {
-        throw "7z extraction failed with exit code $($script:SevenZipProcess.ExitCode)."
+    $exitCode = $script:SevenZipProcess.ExitCode
+
+    if ($null -eq $exitCode) {
+        $pid = $script:SevenZipProcess.Id
+        $hasExited = $script:SevenZipProcess.HasExited
+        $msg = "7z extraction failed and process ExitCode was not available. " +
+               "Pid=$pid HasExited=$hasExited Cancelled=$script:RestoreCancelled FilePath='$SevenZip' Args=$argString"
+        throw $msg
+    }
+
+    if ($exitCode -ne 0) {
+        throw "7z extraction failed with exit code $exitCode. FilePath='$SevenZip' Args=$argString"
     }
 }
 

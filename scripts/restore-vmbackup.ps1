@@ -28,6 +28,12 @@
 .PARAMETER VmStorageRoot
   Destination root for imported VM files when using Copy mode.
 
+.PARAMETER DestinationRoot
+  When specified, controls the final location of the restored VM files.
+
+  - If ImportMode=Register: the archive is extracted under DestinationRoot and the VM is registered in-place from that location (no separate staging).
+  - If ImportMode=Copy or Restore: DestinationRoot is treated as VmStorageRoot (the final Hyper-V storage root).
+
 .PARAMETER ImportMode
   Import strategy:
    - Copy (default): Copies VM to VmStorageRoot and generates new ID.
@@ -80,6 +86,10 @@ param(
     [string]$VmStorageRoot = "$env:ProgramData\Microsoft\Windows\Hyper-V",
 
     [Parameter(Mandatory = $false)]
+    [ValidateNotNullOrEmpty()]
+    [string]$DestinationRoot,
+
+    [Parameter(Mandatory = $false)]
     [ValidateSet('Copy', 'Register', 'Restore')]
     [string]$ImportMode = 'Copy',
 
@@ -103,6 +113,12 @@ Set-StrictMode -Version Latest
 
 # Ensure variables referenced in finally are defined even if we fail early under StrictMode
 $stagingDir = $null
+
+# If the caller explicitly provided DestinationRoot but did not explicitly set ImportMode,
+# treat the operation as "extract to DestinationRoot and Register in-place" by default.
+if ($PSBoundParameters.ContainsKey('DestinationRoot') -and -not $PSBoundParameters.ContainsKey('ImportMode')) {
+    $ImportMode = 'Register'
+}
 
 # Ctrl+C cancellation support
 $script:RestoreCancelled = $false
@@ -576,10 +592,23 @@ try {
     }
 
     $restoreId = (Get-Date).ToString('yyyyMMddHHmmss')
-    $stagingDir = Join-Path -Path $StagingRoot -ChildPath ("restore_{0}_{1}" -f ($leaf -replace '\.7z$',''), $restoreId)
 
-    if (-not (Test-Path -LiteralPath $StagingRoot)) {
-        New-Item -Path $StagingRoot -ItemType Directory -Force | Out-Null
+    # If DestinationRoot is provided and ImportMode=Register, extract directly there (skip staging).
+    $effectiveStagingRoot = $StagingRoot
+
+    if (-not [string]::IsNullOrWhiteSpace($DestinationRoot)) {
+        if ($ImportMode -eq 'Register') {
+            $effectiveStagingRoot = $DestinationRoot
+            $KeepStaging = $true
+        } elseif ($ImportMode -eq 'Copy' -or $ImportMode -eq 'Restore') {
+            $VmStorageRoot = $DestinationRoot
+        }
+    }
+
+    $stagingDir = Join-Path -Path $effectiveStagingRoot -ChildPath ("restore_{0}_{1}" -f ($leaf -replace '\.7z$',''), $restoreId)
+
+    if (-not (Test-Path -LiteralPath $effectiveStagingRoot)) {
+        New-Item -Path $effectiveStagingRoot -ItemType Directory -Force | Out-Null
     }
 
     Expand-BackupArchive -SevenZip $sevenZip -BackupPath $BackupPath -OutDir $stagingDir

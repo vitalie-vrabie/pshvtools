@@ -6,6 +6,15 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-01-02
+
+### Added
+- Restore: `Restore-VMBackup` / `hvrestore` supports `-DestinationRoot` for simpler restore targeting.
+- Docs: added `samples/` folder with end-to-end examples.
+
+### Changed
+- Restore: corrected staging/extraction path handling when using `-DestinationRoot` (in-place registration and Copy/Restore mapping).
+
 ## [1.0.2] - 2026-03-15
 
 ### Added

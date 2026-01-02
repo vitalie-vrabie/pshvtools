@@ -315,7 +315,7 @@ function Expand-BackupArchive {
     try {
         $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
         $logWriter = New-Object System.IO.StreamWriter($logPath, $false, $utf8NoBom)
-        $logWriter.WriteLine("[{0}] 7z.exe: {1} {2}" -f (Get-Date).ToString('yyyy-MM-dd HH:mm:ss'), $SevenZip, $argString)
+        $logWriter.WriteLine(("[{0}] 7z.exe: {1} {2}" -f (Get-Date).ToString('yyyy-MM-dd HH:mm:ss'), $SevenZip, $argString))
         $logWriter.Flush()
 
         try {
@@ -323,7 +323,7 @@ function Expand-BackupArchive {
                 throw "Failed to start 7-Zip process."
             }
         } catch {
-            $logWriter.WriteLine("[{0}] START ERROR: {1}" -f (Get-Date).ToString('yyyy-MM-dd HH:mm:ss'), $_.Exception.Message)
+            $logWriter.WriteLine(("[{0}] START ERROR: {1}" -f (Get-Date).ToString('yyyy-MM-dd HH:mm:ss'), $_.Exception.Message))
             $logWriter.Flush()
             throw "Failed to start 7-Zip process. FilePath='$SevenZip' Args=$argString Error=$($_.Exception.Message)"
         }

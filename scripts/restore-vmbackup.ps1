@@ -298,38 +298,75 @@ function Expand-BackupArchive {
     $args = @('x', '-y', "-o$OutDir", $BackupPath)
     $argString = ($args | ForEach-Object { if ($_ -match '\\s') { '"' + $_ + '"' } else { $_ } }) -join ' '
 
-    # Use Start-Process without -Wait so Ctrl+C can kill it; then wait in a loop.
-    $script:SevenZipProcess = $null
+    $logPath = Join-Path -Path $OutDir -ChildPath '7z-extract.log'
+
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $SevenZip
+    $psi.Arguments = $argString
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+
+    $proc = New-Object System.Diagnostics.Process
+    $proc.StartInfo = $psi
+
+    $logWriter = $null
     try {
-        $script:SevenZipProcess = Start-Process -FilePath $SevenZip -ArgumentList $args -PassThru -NoNewWindow -ErrorAction Stop
-    } catch {
-        throw "Failed to start 7-Zip process. FilePath='$SevenZip' Args=$argString Error=$($_.Exception.Message)"
-    }
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        $logWriter = New-Object System.IO.StreamWriter($logPath, $false, $utf8NoBom)
 
-    if (-not $script:SevenZipProcess) {
-        throw "Failed to start 7-Zip process (no process handle returned). FilePath='$SevenZip' Args=$argString"
-    }
-
-    while (-not $script:SevenZipProcess.HasExited) {
-        if ($script:RestoreCancelled) {
-            try { if (-not $script:SevenZipProcess.HasExited) { $script:SevenZipProcess.Kill() } } catch {}
-            throw "Operation cancelled by user."
+        $onOut = [System.Diagnostics.DataReceivedEventHandler]{
+            param($sender, $e)
+            if ($null -ne $e.Data) {
+                try { $logWriter.WriteLine($e.Data); $logWriter.Flush() } catch {}
+            }
         }
-        Start-Sleep -Milliseconds 200
+        $onErr = [System.Diagnostics.DataReceivedEventHandler]{
+            param($sender, $e)
+            if ($null -ne $e.Data) {
+                try { $logWriter.WriteLine($e.Data); $logWriter.Flush() } catch {}
+            }
+        }
+
+        try {
+            if (-not $proc.Start()) {
+                throw "Failed to start 7-Zip process. FilePath='$SevenZip' Args=$argString"
+            }
+        } catch {
+            throw "Failed to start 7-Zip process. FilePath='$SevenZip' Args=$argString Error=$($_.Exception.Message)"
+        }
+
+        $script:SevenZipProcess = $proc
+
+        try {
+            $proc.add_OutputDataReceived($onOut)
+            $proc.add_ErrorDataReceived($onErr)
+            $proc.BeginOutputReadLine()
+            $proc.BeginErrorReadLine()
+        } catch {
+            # If event hookup fails, still continue; output may be missing from the log.
+        }
+
+        while (-not $proc.HasExited) {
+            if ($script:RestoreCancelled) {
+                try { if (-not $proc.HasExited) { $proc.Kill() } } catch {}
+                throw "Operation cancelled by user."
+            }
+            Start-Sleep -Milliseconds 200
+        }
+
+        # Ensure async readers drain
+        try { $proc.WaitForExit() } catch {}
+
+        $exitCode = $proc.ExitCode
+        if ($exitCode -ne 0) {
+            throw "7z extraction failed with exit code $exitCode. FilePath='$SevenZip' Args=$argString Log='$logPath'"
+        }
     }
-
-    $exitCode = $script:SevenZipProcess.ExitCode
-
-    if ($null -eq $exitCode) {
-        $pid = $script:SevenZipProcess.Id
-        $hasExited = $script:SevenZipProcess.HasExited
-        $msg = "7z extraction failed and process ExitCode was not available. " +
-               "Pid=$pid HasExited=$hasExited Cancelled=$script:RestoreCancelled FilePath='$SevenZip' Args=$argString"
-        throw $msg
-    }
-
-    if ($exitCode -ne 0) {
-        throw "7z extraction failed with exit code $exitCode. FilePath='$SevenZip' Args=$argString"
+    finally {
+        try { if ($logWriter) { $logWriter.Flush(); $logWriter.Dispose() } } catch {}
+        try { if ($proc) { $proc.Dispose() } } catch {}
     }
 }
 

@@ -682,7 +682,9 @@ try {
 
     $restoreId = (Get-Date).ToString('yyyyMMddHHmmss')
 
-    # If DestinationRoot is provided and ImportMode=Register, extract directly there (skip staging).
+    # If DestinationRoot is provided, use it directly.
+    # - Register: extract directly into DestinationRoot and register in-place (no staging subfolder).
+    # - Copy/Restore: treat DestinationRoot as VmStorageRoot by default.
     $effectiveStagingRoot = $StagingRoot
 
     if (-not [string]::IsNullOrWhiteSpace($DestinationRoot)) {
@@ -694,10 +696,15 @@ try {
         }
     }
 
-    $stagingDir = Join-Path -Path $effectiveStagingRoot -ChildPath ("restore_{0}_{1}" -f ($leaf -replace '\.7z$',''), $restoreId)
+    if ($ImportMode -eq 'Register' -and -not [string]::IsNullOrWhiteSpace($DestinationRoot)) {
+        # Skip staging subfolder: extract directly into DestinationRoot
+        $stagingDir = $DestinationRoot
+    } else {
+        $stagingDir = Join-Path -Path $effectiveStagingRoot -ChildPath ("restore_{0}_{1}" -f ($leaf -replace '\.7z$',''), $restoreId)
+    }
 
-    if (-not (Test-Path -LiteralPath $effectiveStagingRoot)) {
-        New-Item -Path $effectiveStagingRoot -ItemType Directory -Force | Out-Null
+    if (-not (Test-Path -LiteralPath (Split-Path -Path $stagingDir -Parent))) {
+        New-Item -Path (Split-Path -Path $stagingDir -Parent) -ItemType Directory -Force | Out-Null
     }
 
     Expand-BackupArchive -SevenZip $sevenZip -BackupPath $BackupPath -OutDir $stagingDir

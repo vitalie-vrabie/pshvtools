@@ -260,18 +260,15 @@ var
 begin
   InstallPath := ExpandConstant('{commonpf64}\\WindowsPowerShell\\Modules\\pshvtools');
 
-  // Robust verification: check required files exist, ensure restore-vmbackup.ps1 parses, then import module.
-  // Keep quoting simple by using single quotes inside PowerShell where possible.
+  // Minimal verification: ensure files exist and module manifest is readable.
+  // Do NOT fail install on script parse/import; those can be impacted by AV/EDR or existing old module state.
   PsArgs :=
     '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command ' +
     '"$ErrorActionPreference=''Stop''; ' +
     '$p=''' + InstallPath + '''; ' +
     '$files=@(''pshvtools.psd1'',''pshvtools.psm1'',''hvbak.ps1'',''fix-vhd-acl.ps1'',''restore-vmbackup.ps1''); ' +
     'foreach($f in $files){ $fp=Join-Path $p $f; if(-not (Test-Path -LiteralPath $fp)){ throw (''Missing file: {0}'' -f $fp) } }; ' +
-    '$tokens=$null; $errors=$null; ' +
-    '[System.Management.Automation.Language.Parser]::ParseFile((Join-Path $p ''restore-vmbackup.ps1''), [ref]$tokens, [ref]$errors) | Out-Null; ' +
-    'if($errors -and $errors.Count -gt 0){ throw (''restore-vmbackup.ps1 parse errors:'' + [Environment]::NewLine + (($errors | Format-List * | Out-String))) }; ' +
-    'Import-Module pshvtools -Force -ErrorAction Stop; exit 0"';
+    'Test-ModuleManifest -Path (Join-Path $p ''pshvtools.psd1'') | Out-Null; exit 0"';
 
   Result := Exec('powershell.exe', PsArgs, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Result := Result and (ResultCode = 0);
@@ -284,25 +281,22 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
-    // Verify module installation
-    Exec('powershell.exe',
-      '-NoProfile -NonInteractive -Command "Import-Module pshvtools -ErrorAction SilentlyContinue"',
-      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-
-    // Harden: fail fast if install is corrupted/partial
+    // Harden: validate installation layout; warn but don't abort on deeper runtime checks.
     if not VerifyInstalledModule() then
     begin
       ModulePath := ExpandConstant('{commonpf64}\\WindowsPowerShell\\Modules\\pshvtools');
 
-      MsgBox('PSHVTools installation verification failed.' + #13#10 +
-        'To see the exact reason, run this in an elevated PowerShell:' + #13#10 + #13#10 +
+      MsgBox('PSHVTools installed, but post-install verification failed.' + #13#10 +
+        'This usually indicates missing files or a permissions/AV issue.' + #13#10 + #13#10 +
+        'Verify these files exist:' + #13#10 +
+        '  ' + ModulePath + '\\pshvtools.psd1' + #13#10 +
+        '  ' + ModulePath + '\\restore-vmbackup.ps1' + #13#10 + #13#10 +
+        'Then run in an elevated PowerShell to diagnose parse errors:' + #13#10 +
         '  $p=""' + ModulePath + '""' + #13#10 +
         '  $tokens=$null; $errors=$null' + #13#10 +
         '  [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $p ""restore-vmbackup.ps1""), [ref]$tokens, [ref]$errors) | Out-Null' + #13#10 +
-        '  $errors | Format-List *' + #13#10 + #13#10 +
-        'Common cause: the installed restore-vmbackup.ps1 was modified by another process (AV/EDR) or partially written.',
-        mbError, MB_OK);
-      Abort;
+        '  $errors | Format-List *',
+        mbInformation, MB_OK);
     end;
   end;
 end;

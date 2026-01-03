@@ -273,6 +273,7 @@ foreach ($vm in $vms) {
         # Timestamp to use for per-VM temp folder name; defaults to now and updated from checkpoint when available
         $checkpointTs = (Get-Date).ToString("yyyyMMddHHmmss")
         $vmWasTurnedOff = $false
+        $snapshotId = $null
 
         try {
             if (IsCancelled) { throw "Operation cancelled by user" }
@@ -283,12 +284,7 @@ foreach ($vm in $vms) {
             $wasRunning = $initialState -eq 'Running'
             LocalLog ("VM {0} initial state: {1}" -f $vmName, $initialState)
 
-            # If we created a checkpoint, parse its timestamp and use it for per-VM temp folder naming
-            if ($snapshotName -and ($snapshotName -match '_(\d{14})$')) {
-                try { $checkpointTs = [datetime]::ParseExact($Matches[1], 'yyyyMMddHHmmss', $null).ToString('yyyyMMddHHmmss') } catch {}
-            }
-
-            # create per-vm temp folder with timestamp suffix derived from checkpoint
+            # create per-vm temp folder with timestamp suffix derived from checkpoint (when available)
             $vmTemp = Join-Path -Path $TempRoot -ChildPath ("{0}_{1}" -f $safeVmName, $checkpointTs)
             try {
                 if (Test-Path -Path $vmTemp) { Remove-Item -Path $vmTemp -Recurse -Force -ErrorAction SilentlyContinue }
@@ -300,41 +296,63 @@ foreach ($vm in $vms) {
             }
 
             $result.TempPath = $vmTemp
-            $archivePattern = "$safeVmName*.7z"
-            $destArchivePath = $null
+             $archivePattern = "$safeVmName*.7z"
+             $destArchivePath = $null
 
-            # Replace lingering Assert-NotCancelled call sites
+             # Replace lingering Assert-NotCancelled call sites
 
-            # create checkpoint (try production, fallback standard)
-            if ($wasRunning) {
-                try {
-                    $snapshotName = ("export_{0}_{1}" -f $vmName, (Get-Date).ToString("yyyyMMddHHmmss"))
-                    LocalLog ("Creating production checkpoint {0} for {1}" -f $snapshotName, $vmName)
-                    try {
-                        Checkpoint-VM -VMName $vmName -SnapshotName $snapshotName -CheckpointType Production -ErrorAction Stop
-                    } catch {
-                        LocalLog ("Production checkpoint failed; attempting standard checkpoint for {0}" -f $vmName)
-                        Checkpoint-VM -VMName $vmName -SnapshotName $snapshotName -ErrorAction Stop
-                    }
-                    LocalLog ("Checkpoint created: {0}" -f $snapshotName)
-                } catch {
-                    LocalLog ("Checkpoint creation failed for {0}: {1}" -f $vmName, $_)
-                    if ($ForceTurnOff) {
-                        try {
-                            LocalLog ("Forcing power off of {0}" -f $vmName)
-                            Stop-VM -Name $vmName -TurnOff -Force -ErrorAction Stop
-                            $vmWasTurnedOff = $true
-                            LocalLog ("VM {0} turned off successfully" -f $vmName)
-                        } catch {
-                            LocalLog ("Failed to force turn off {0}: {1}" -f $vmName, $_)
-                            throw
-                        }
-                    } else {
-                        LocalLog ("Skipping {0} because checkpoint failed and ForceTurnOff is not set." -f $vmName)
-                        throw "Checkpoint failed and not allowed to turn off."
-                    }
-                }
-            }
+             # create checkpoint (try production, fallback standard)
+             if ($wasRunning) {
+                 try {
+                     $snapshotName = ("export_{0}_{1}" -f $vmName, (Get-Date).ToString("yyyyMMddHHmmss"))
+                     LocalLog ("Creating production checkpoint {0} for {1}" -f $snapshotName, $vmName)
+                     try {
+                         Checkpoint-VM -VMName $vmName -SnapshotName $snapshotName -CheckpointType Production -ErrorAction Stop
+                     } catch {
+                         LocalLog ("Production checkpoint failed; attempting standard checkpoint for {0}" -f $vmName)
+                         Checkpoint-VM -VMName $vmName -SnapshotName $snapshotName -ErrorAction Stop
+                     }
+                     LocalLog ("Checkpoint created: {0}" -f $snapshotName)
+
+                     # Capture snapshot identity and ensure per-VM folder names align with the checkpoint timestamp.
+                     try {
+                         $createdSnap = Get-VMSnapshot -VMName $vmName -Name $snapshotName -ErrorAction Stop | Select-Object -First 1
+                         if ($createdSnap) { $snapshotId = $createdSnap.Id }
+                     } catch {}
+                     if ($snapshotName -match '_(\d{14})$') {
+                         try { $checkpointTs = [datetime]::ParseExact($Matches[1], 'yyyyMMddHHmmss', $null).ToString('yyyyMMddHHmmss') } catch {}
+                     }
+                 } catch {
+                     LocalLog ("Checkpoint creation failed for {0}: {1}" -f $vmName, $_)
+                     if ($ForceTurnOff) {
+                         try {
+                             LocalLog ("Forcing power off of {0}" -f $vmName)
+                             Stop-VM -Name $vmName -TurnOff -Force -ErrorAction Stop
+                             $vmWasTurnedOff = $true
+                             LocalLog ("VM {0} turned off successfully" -f $vmName)
+                         } catch {
+                             LocalLog ("Failed to force turn off {0}: {1}" -f $vmName, $_)
+                             throw
+                         }
+                     } else {
+                         LocalLog ("Skipping {0} because checkpoint failed and ForceTurnOff is not set." -f $vmName)
+                         throw "Checkpoint failed and not allowed to turn off."
+                     }
+                 }
+             }
+
+             # create per-vm temp folder with timestamp suffix derived from checkpoint (when available)
+             $vmTemp = Join-Path -Path $TempRoot -ChildPath ("{0}_{1}" -f $safeVmName, $checkpointTs)
+             try {
+                 if (Test-Path -Path $vmTemp) { Remove-Item -Path $vmTemp -Recurse -Force -ErrorAction SilentlyContinue }
+                 New-Item -Path $vmTemp -ItemType Directory -Force | Out-Null
+                 LocalLog ("Created per-VM export folder: {0}" -f $vmTemp)
+             } catch {
+                 LocalLog ("Failed to create per-VM export folder {0}: {1}" -f $vmTemp, $_)
+                 throw
+             }
+
+             $result.TempPath = $vmTemp
 
             if (IsCancelled) {
                 LocalLog ("Cancellation detected after checkpoint creation, aborting for {0}" -f $vmName)
@@ -441,9 +459,41 @@ foreach ($vm in $vms) {
             if ($snapshotName) {
                 try {
                     LocalLog ("Removing snapshot {0} for {1}" -f $snapshotName, $vmName)
-                    Get-VMSnapshot -VMName $vmName -Name $snapshotName -ErrorAction SilentlyContinue | Remove-VMSnapshot -ErrorAction Stop
-                    LocalLog ("Snapshot removed: {0}" -f $snapshotName)
+                    $snapToRemove = $null
+                    try {
+                        if ($snapshotId) {
+                            $snapToRemove = Get-VMSnapshot -VMName $vmName -ErrorAction SilentlyContinue | Where-Object { $_.Id -eq $snapshotId } | Select-Object -First 1
+                        }
+                    } catch {}
+                    if (-not $snapToRemove) {
+                        $snapToRemove = Get-VMSnapshot -VMName $vmName -Name $snapshotName -ErrorAction SilentlyContinue | Select-Object -First 1
+                    }
+
+                    if ($snapToRemove) {
+                        $snapToRemove | Remove-VMSnapshot -ErrorAction Stop
+                    }
+
+                    # Wait (best-effort) for the checkpoint to fully merge/disappear.
+                    $deadline = (Get-Date).AddMinutes(30)
+                    while ((Get-Date) -lt $deadline) {
+                        if (IsCancelled) { break }
+                        $remaining = $null
+                        try {
+                            if ($snapshotId) {
+                                $remaining = Get-VMSnapshot -VMName $vmName -ErrorAction SilentlyContinue | Where-Object { $_.Id -eq $snapshotId } | Select-Object -First 1
+                            }
+                            if (-not $remaining) {
+                                $remaining = Get-VMSnapshot -VMName $vmName -Name $snapshotName -ErrorAction SilentlyContinue | Select-Object -First 1
+                            }
+                        } catch {}
+
+                        if (-not $remaining) { break }
+                        Start-Sleep -Seconds 5
+                    }
+
+                    LocalLog ("Snapshot removed (or no longer present): {0}" -f $snapshotName)
                     $snapshotName = $null  # Mark as cleaned up
+                    $snapshotId = $null
                 } catch {
                     LocalLog ("Failed to remove snapshot {0} for {1}: {2}" -f $snapshotName, $vmName, $_)
                 }
@@ -590,8 +640,6 @@ foreach ($vm in $vms) {
                 } catch {
                     LocalLog ("Error while running 7z process: {0}" -f $_)
                     LocalLog ("7z command was: {0} {1}" -f $sevenZip, ($args -join ' '))
-                    LocalLog ("Working directory was: {0}" -f $vmTemp)
-                    LocalLog ("Target archive: {0}" -f $tempArchive)
 
                     # Best-effort delete partial temp archive on any error/cancel
                     try {
@@ -712,7 +760,15 @@ foreach ($vm in $vms) {
             if ($snapshotName) {
                 try {
                     LocalLog ("Cleanup: Removing snapshot {0} for {1}" -f $snapshotName, $vmName)
-                    $snap = Get-VMSnapshot -VMName $vmName -Name $snapshotName -ErrorAction SilentlyContinue
+                    $snap = $null
+                    try {
+                        if ($snapshotId) {
+                            $snap = Get-VMSnapshot -VMName $vmName -ErrorAction SilentlyContinue | Where-Object { $_.Id -eq $snapshotId } | Select-Object -First 1
+                        }
+                    } catch {}
+                    if (-not $snap) {
+                        $snap = Get-VMSnapshot -VMName $vmName -Name $snapshotName -ErrorAction SilentlyContinue | Select-Object -First 1
+                    }
                     if ($snap) {
                         $snap | Remove-VMSnapshot -ErrorAction Stop
                         LocalLog ("Cleanup: Snapshot {0} removed successfully" -f $snapshotName)

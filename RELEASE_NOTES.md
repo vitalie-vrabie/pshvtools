@@ -28,8 +28,3 @@ Release date: 2026-01-02
 ## Installer / packaging
 
 - GUI installer (Inno Setup): `dist\PSHVTools-Setup-1.0.4.exe`
-
-## Checksums
-
-- `dist\PSHVTools-Setup-1.0.4.exe` (SHA256):
-  `TBD`

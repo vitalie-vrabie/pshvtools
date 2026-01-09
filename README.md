@@ -8,39 +8,33 @@
 
 ---
 
-## ?? What is PSHVTools?
+## What is PSHVTools?
 
-PSHVTools is a professional PowerShell module for backing up and managing Hyper-V virtual machines. It provides cmdlets for automated, parallel VM backups with checkpoint support, 7-Zip compression, VHD permission repair utilities, and VM recovery tools.
+PSHVTools is a PowerShell module for backing up and managing Hyper-V virtual machines. It provides cmdlets for automated, parallel VM backups with checkpoint support, 7-Zip compression, VHD permission repair utilities, and VM recovery tools.
 
-### Key Features:
-- ? Live VM backups using Production checkpoints
-- ? Parallel processing of multiple VMs
-- ??? 7-Zip compression with multithreading
-- ?? Configurable backup retention (keep 1-100 copies per VM)
-- ?? Progress tracking with real-time status
-- ? Graceful cancellation (Ctrl+C support)
-- ??? Low-priority compression (Idle CPU class)
-- ?? VHD/VHDX permission repair utility
-- ?? Restore/import from `hvbak` `.7z` backups (with optional network switch mapping)
-- ?? Recover orphaned VMs by re-registering configs found on disk (scan `Virtual Machines` folder)
+### Key Features
+- Live VM backups using Production checkpoints
+- Parallel processing of multiple VMs
+- 7-Zip compression with multithreading
+- Configurable backup retention (keep 1-100 copies per VM)
+- Progress tracking with real-time status
+- Graceful cancellation (Ctrl+C support)
+- Low-priority compression (Idle CPU class)
+- VHD/VHDX permission repair utility
+- Restore/import from `hvbak` `.7z` backups (with optional network switch mapping)
+- Recover orphaned VMs by re-registering configs found on disk (scan `Virtual Machines` folder)
+- Utility script to remove GPU partition adapters from VMs (see `scripts/remove-gpu-partitions.ps1`)
 
 ---
 
-## ?? Installation
+## Installation
 
 ### GUI Installer (Recommended for End Users)
 
 1. Download `PSHVTools-Setup-1.0.5.exe`
 2. Double-click to run the installer
 3. Follow the wizard
-4. Done!
-
-**Features:**
-- Professional Windows wizard
-- System requirements check
-- Start Menu shortcuts
-- Add/Remove Programs integration
-- Silent installation support
+4. Done
 
 **Silent install:**
 ```cmd
@@ -50,8 +44,7 @@ PSHVTools-Setup-1.0.5.exe /VERYSILENT /NORESTART
 ### PowerShell Installer (Alternative)
 
 1. Download and extract `PSHVTools-Setup-1.0.5.zip`
-2. Right-click `Install.ps1` ? "Run with PowerShell" (as Administrator)
-3. Done!
+2. Right-click `Install.ps1` -> "Run with PowerShell" (as Administrator)
 
 **Command line install:**
 ```powershell
@@ -65,17 +58,13 @@ powershell -ExecutionPolicy Bypass -File Install.ps1 -Silent
 
 After installation:
 ```powershell
-# Import module
 Import-Module pshvtools
-
-# Get help
-Get-Help Invoke-VMBackup -Full
-Get-Help Repair-VhdAcl -Full
-Get-Help Restore-VMBackup -Full
-Get-Help Restore-OrphanedVMs -Full
 
 # Backup VMs
 hvbak -NamePattern "*"
+
+# Restore VMs
+hvrestore -VmName "MyVM" -Latest
 
 # Fix VHD permissions
 fix-vhd-acl -WhatIf
@@ -88,69 +77,22 @@ hvrecover -WhatIf
 
 ---
 
-## ?? Quick Start
+## Utility Scripts
 
-### Backing Up VMs
+### Remove GPU partition adapters
 
-```powershell
-# Import the module
-Import-Module pshvtools
+File: `scripts/remove-gpu-partitions.ps1`
 
-# Backup all VMs
-hvbak -NamePattern "*"
-
-# Backup specific VMs
-hvbak -NamePattern "srv-*" -Destination "D:\Backups"
-
-# Keep 5 most recent backups per VM
-hvbak -NamePattern "*" -KeepCount 5
-
-# Without forcing VM power off
-hvbak -NamePattern "web-*" -ForceTurnOff:$false
-```
-
-### Fixing VHD Permissions
+Removes all GPU partition adapters from Hyper-V VMs matching a wildcard pattern. This is intended to work even if the host has no compatible GPU currently present.
 
 ```powershell
-# Preview fixes for all VMs
-fix-vhd-acl -WhatIf
-
-# Fix all VMs on host
-fix-vhd-acl
-
-# Fix VHDs in a folder
-fix-vhd-acl -VhdFolder "D:\Restores"
-
-# Fix VHDs from CSV list
-fix-vhd-acl -VhdListCsv "C:\temp\vhds.csv"
-```
-
-### Restoring VMs from Backup
-
-```powershell
-# Restore the latest backup for a VM
-hvrestore -VmName "MyVM" -Latest
-
-# Restore VM and start after
-hvrestore -VmName "MyVM" -Latest -StartAfterRestore:$true
-
-# Restore VM with new ID (recommended)
-hvrestore -VmName "MyVM" -Latest -ImportMode Copy
-```
-
-### Recovering Orphaned VMs (re-register)
-
-```powershell
-# Scan the default Hyper-V config location (Virtual Machines) and show what would be registered
-hvrecover -WhatIf
-
-# Scan a custom storage root (auto-detects the 'Virtual Machines' folder if present)
-hvrecover -VmConfigRoot "D:\Hyper-V" 
+.\scripts\remove-gpu-partitions.ps1 -NamePattern "lab-*"
+.\scripts\remove-gpu-partitions.ps1 -NamePattern "*" -WhatIf
 ```
 
 ---
 
-## ??? Building from Source
+## Building from Source
 
 ### Prerequisites
 
@@ -159,7 +101,6 @@ hvrecover -VmConfigRoot "D:\Hyper-V"
 - Or install via WinGet: `winget install JRSoftware.InnoSetup`
 
 **For PowerShell Installer:**
-- MSBuild (Visual Studio 2022 or .NET SDK 6.0+)
 - PowerShell 5.1+
 
 ### Build Commands
@@ -168,9 +109,6 @@ hvrecover -VmConfigRoot "D:\Hyper-V"
 # Build GUI EXE installer (recommended)
 installer\Build-InnoSetupInstaller.bat
 ```
-
-**Output:**
-- `dist\PSHVTools-Setup-1.0.5.exe` - GUI installer
 
 **Full build documentation:** See [BUILD_GUIDE.md](BUILD_GUIDE.md)
 

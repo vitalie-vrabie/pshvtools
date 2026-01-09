@@ -1,14 +1,14 @@
 # Quick Start Guide - PSHVTools
 
-## ?? Installation
+## Installation
 
 ### GUI Installer (Recommended)
-1. Download `PSHVTools-Setup-1.0.3.exe`
+1. Download `PSHVTools-Setup-1.0.5.exe`
 2. Double-click to run
 3. Follow the wizard
 4. Done!
 
-## ?? Available Commands
+## Available Commands
 
 After installation, the **pshvtools** module provides:
 
@@ -31,7 +31,7 @@ After installation, the **pshvtools** module provides:
 
 All commands work identically!
 
-## ?? Quick Start
+## Quick Start
 
 ### Importing the Module
 
@@ -70,7 +70,7 @@ Get-Help Restore-OrphanedVMs -Full
 Get-Help hvrecover -Examples
 ```
 
-## ?? Backing Up VMs
+## Backing Up VMs
 
 ### Basic Usage
 
@@ -127,7 +127,7 @@ hvbak -NamePattern "prod-*" `
 - Stored in: `Destination\yyyyMMdd\VMName_timestamp.7z`
 - Example: `D:\backups\20251230\MyVM_20251230075500.7z`
 
-## ?? Fixing VHD Permissions
+## Fixing VHD Permissions
 
 ### Basic Usage
 
@@ -176,7 +176,7 @@ The `fix-vhd-acl` command:
 - When VMs can't start due to permission errors
 - After moving VHDs to different folders
 
-## ?? Restoring VMs
+## Restoring VMs
 
 ### Basic Usage
 
@@ -214,7 +214,7 @@ hvrestore -VmName "MyVM" -BackupRoot "D:\backups" -Latest -Force
 - With `ImportMode=Copy`/`Restore`: `DestinationRoot` is treated as the final Hyper-V storage root (same as `VmStorageRoot`).
 
 
-## ?? Recovering Orphaned VMs (re-register)
+## Recovering Orphaned VMs (re-register)
 
 Use this when VM files exist on disk, but the VM is missing from Hyper-V Manager / `Get-VM`.
 
@@ -229,7 +229,7 @@ hvrecover -VmConfigRoot "D:\Hyper-V"
 hvrecover -VmConfigRoot "D:\Hyper-V" -IncludeXml
 ```
 
-## ?? Testing the Installation
+## Testing the Installation
 
 ```powershell
 # Check if module is loaded
@@ -251,7 +251,7 @@ hvrestore
 hvrecover
 ```
 
-## ?? Understanding Progress
+## Understanding Progress
 
 When running backups, you'll see:
 - **Root progress bar:** Overall batch progress
@@ -267,7 +267,7 @@ When running backups, you'll see:
 5. **Archiving (7z)** (60%)
 6. **Complete** (100%)
 
-## ?? Configuration
+## Configuration
 
 ### Default Settings
 
@@ -296,7 +296,7 @@ hvbak -NamePattern "*" -KeepCount 10
 - Deletes older archives
 - Removes empty date folders
 
-## ??? Common Usage Patterns
+## Common Usage Patterns
 
 ### Daily Backup Script
 
@@ -344,7 +344,7 @@ fix-vhd-acl
 Write-Host "Maintenance complete!" -ForegroundColor Green
 ```
 
-## ? Uninstallation
+## Uninstallation
 
 ### GUI Installer Method
 1. Open **Settings** ? **Apps**
@@ -364,7 +364,7 @@ Remove-Module pshvtools -ErrorAction SilentlyContinue
 Remove-Item "C:\Program Files\WindowsPowerShell\Modules\pshvtools" -Recurse -Force
 ```
 
-## ?? Troubleshooting
+## Troubleshooting
 
 ### Commands Not Found
 
@@ -422,7 +422,7 @@ Get-Content "$env:TEMP\FixVhdAcl.log"
 fix-vhd-acl -WhatIf
 ```
 
-## ?? Pro Tips
+## Pro Tips
 
 1. **Tab completion:** Type `hvbak -` and press Tab to cycle through parameters
 2. **Use aliases:** Choose whichever you prefer - `hvbak`, `hv-bak`, or `Invoke-VMBackup`
@@ -435,7 +435,7 @@ fix-vhd-acl -WhatIf
 9. **Adjust retention:** Change `KeepCount` based on storage capacity
 10. **Schedule it:** Create scheduled tasks for automated backups
 
-## ?? Additional Resources
+## Additional Resources
 
 - **Full Documentation:** See README.md in the repository
 - **Build Guide:** See BUILD_GUIDE.md for developers
@@ -443,7 +443,7 @@ fix-vhd-acl -WhatIf
 - **GitHub Repository:** https://github.com/vitalie-vrabie/pshvtools
 - **Issues & Support:** https://github.com/vitalie-vrabie/pshvtools/issues
 
-## ?? Learning More
+## Learning More
 
 ```powershell
 # Explore all parameters

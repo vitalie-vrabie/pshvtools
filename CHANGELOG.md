@@ -7,6 +7,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ## [Unreleased]
 
 ### Added
+- Utility: `scripts/remove-gpu-partitions.ps1` to remove all GPU partition adapter assignments from VMs matched by wildcard name.
 
 ### Changed
 

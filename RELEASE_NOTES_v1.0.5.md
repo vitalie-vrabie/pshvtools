@@ -16,6 +16,31 @@ Release date: 2026-01-09
 ### Fixed
 - Backup: avoid duplicate per-VM temp export folder creation which could interfere with cleanup.
 
+## Usage samples
+
+### Backup VMs (hvbak)
+
+```powershell
+# Backup all VMs
+hvbak -NamePattern "*"
+
+# Backup a subset and keep last 5 archives
+hvbak -NamePattern "lab-*" -KeepCount 5
+```
+
+### Remove GPU partition adapters (nogpup)
+
+```powershell
+# Load the module
+Import-Module pshvtools
+
+# Remove GPU partition adapters from matching VMs
+nogpup -NamePattern "lab-*"
+
+# Preview actions only
+nogpup -NamePattern "*" -WhatIf
+```
+
 ## Installer / packaging
 
 - GUI installer (Inno Setup): `dist\PSHVTools-Setup-1.0.5.exe`

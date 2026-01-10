@@ -296,50 +296,95 @@ foreach ($vm in $vms) {
              }
 
              $result.TempPath = $vmTemp
-              $archivePattern = "$safeVmName*.7z"
-              $destArchivePath = $null
+                $archivePattern = "$safeVmName*.7z"
+                $destArchivePath = $null
 
-             # Replace lingering Assert-NotCancelled call sites
+              # Replace lingering Assert-NotCancelled call sites
 
-             # create checkpoint (try production, fallback standard)
-             if ($wasRunning) {
-                 try {
-                     $snapshotName = ("export_{0}_{1}" -f $vmName, (Get-Date).ToString("yyyyMMddHHmmss"))
-                     LocalLog ("Creating production checkpoint {0} for {1}" -f $snapshotName, $vmName)
+              # create checkpoint (try production, fallback standard)
+              if ($wasRunning) {
+                  try {
+                      $snapshotName = ("export_{0}_{1}" -f $vmName, (Get-Date).ToString("yyyyMMddHHmmss"))
+                      LocalLog ("Creating production checkpoint {0} for {1}" -f $snapshotName, $vmName)
+                     # Run checkpoint creation in a nested job so Ctrl+C can interrupt promptly.
+                     $checkpointJob = $null
                      try {
-                         Checkpoint-VM -VMName $vmName -SnapshotName $snapshotName -CheckpointType Production -ErrorAction Stop
-                     } catch {
-                         LocalLog ("Production checkpoint failed; attempting standard checkpoint for {0}" -f $vmName)
-                         Checkpoint-VM -VMName $vmName -SnapshotName $snapshotName -ErrorAction Stop
-                     }
-                     LocalLog ("Checkpoint created: {0}" -f $snapshotName)
-
-                     # Capture snapshot identity and ensure per-VM folder names align with the checkpoint timestamp.
-                     try {
-                         $createdSnap = Get-VMSnapshot -VMName $vmName -Name $snapshotName -ErrorAction Stop | Select-Object -First 1
-                         if ($createdSnap) { $snapshotId = $createdSnap.Id }
-                     } catch {}
-                     if ($snapshotName -match '_(\d{14})$') {
-                         try { $checkpointTs = [datetime]::ParseExact($Matches[1], 'yyyyMMddHHmmss', $null).ToString('yyyyMMddHHmmss') } catch {}
-                     }
-                 } catch {
-                     LocalLog ("Checkpoint creation failed for {0}: {1}" -f $vmName, $_)
-                     if ($ForceTurnOff) {
-                         try {
-                             LocalLog ("Forcing power off of {0}" -f $vmName)
-                             Stop-VM -Name $vmName -TurnOff -Force -ErrorAction Stop
-                             $vmWasTurnedOff = $true
-                             LocalLog ("VM {0} turned off successfully" -f $vmName)
-                         } catch {
-                             LocalLog ("Failed to force turn off {0}: {1}" -f $vmName, $_)
-                             throw
+                         $checkpointJob = Start-Job -ArgumentList $vmName, $snapshotName -ScriptBlock {
+                             param($n, $snap)
+                             Import-Module Hyper-V -ErrorAction SilentlyContinue | Out-Null
+                             try {
+                                 Checkpoint-VM -VMName $n -SnapshotName $snap -CheckpointType Production -ErrorAction Stop
+                             } catch {
+                                 # Fallback to standard checkpoint
+                                 Checkpoint-VM -VMName $n -SnapshotName $snap -ErrorAction Stop
+                             }
                          }
-                     } else {
-                         LocalLog ("Skipping {0} because checkpoint failed and ForceTurnOff is not set." -f $vmName)
-                         throw "Checkpoint failed and not allowed to turn off."
+
+                         while ($true) {
+                             if (IsCancelled) {
+                                 LocalLog ("Cancellation detected during checkpoint creation for {0}. Stopping checkpoint job..." -f $vmName)
+                                 try { Stop-Job -Job $checkpointJob -Force -ErrorAction SilentlyContinue } catch {}
+
+                                 # Best-effort cleanup: remove any partially created export_* checkpoint.
+                                 try {
+                                     $snaps = Get-VMSnapshot -VMName $vmName -ErrorAction SilentlyContinue |
+                                         Where-Object { $_.Name -eq $snapshotName -or $_.Name -like 'export_*' }
+                                     foreach ($s in $snaps) {
+                                         try {
+                                             LocalLog ("Cleanup: Removing snapshot after cancellation: {0}" -f $s.Name)
+                                             Remove-VMSnapshot -VMSnapshot $s -ErrorAction SilentlyContinue
+                                         } catch {}
+                                     }
+                                 } catch {}
+
+                                 throw "Operation cancelled by user"
+                             }
+
+                             if ($checkpointJob.State -in @('Completed','Failed','Stopped')) { break }
+                             Start-Sleep -Milliseconds 300
+                         }
+
+                         if ($checkpointJob.State -ne 'Completed') {
+                             throw "Checkpoint job did not complete successfully (state: $($checkpointJob.State))"
+                         }
+
+                         # Bubble up checkpoint job errors
+                         $null = Receive-Job -Job $checkpointJob -ErrorAction Stop
                      }
-                 }
-             }
+                     finally {
+                         if ($checkpointJob) {
+                             try { Remove-Job -Job $checkpointJob -Force -ErrorAction SilentlyContinue } catch {}
+                         }
+                     }
+
+                      LocalLog ("Checkpoint created: {0}" -f $snapshotName)
+
+                      # Capture snapshot identity and ensure per-VM folder names align with the checkpoint timestamp.
+                      try {
+                          $createdSnap = Get-VMSnapshot -VMName $vmName -Name $snapshotName -ErrorAction Stop | Select-Object -First 1
+                          if ($createdSnap) { $snapshotId = $createdSnap.Id }
+                      } catch {}
+                      if ($snapshotName -match '_(\d{14})$') {
+                          try { $checkpointTs = [datetime]::ParseExact($Matches[1], 'yyyyMMddHHmmss', $null).ToString('yyyyMMddHHmmss') } catch {}
+                      }
+                  } catch {
+                      LocalLog ("Checkpoint creation failed for {0}: {1}" -f $vmName, $_)
+                      if ($ForceTurnOff) {
+                          try {
+                              LocalLog ("Forcing power off of {0}" -f $vmName)
+                              Stop-VM -Name $vmName -TurnOff -Force -ErrorAction Stop
+                              $vmWasTurnedOff = $true
+                              LocalLog ("VM {0} turned off successfully" -f $vmName)
+                          } catch {
+                              LocalLog ("Failed to force turn off {0}: {1}" -f $vmName, $_)
+                              throw
+                          }
+                      } else {
+                          LocalLog ("Skipping {0} because checkpoint failed and ForceTurnOff is not set." -f $vmName)
+                          throw "Checkpoint failed and not allowed to turn off."
+                      }
+                  }
+              }
 
              # create per-vm temp folder with timestamp suffix derived from checkpoint (when available)
              $vmTemp = Join-Path -Path $TempRoot -ChildPath ("{0}_{1}" -f $safeVmName, $checkpointTs)

@@ -284,20 +284,20 @@ foreach ($vm in $vms) {
             $wasRunning = $initialState -eq 'Running'
             LocalLog ("VM {0} initial state: {1}" -f $vmName, $initialState)
 
-            # create per-vm temp folder with timestamp suffix derived from checkpoint (when available)
-            $vmTemp = Join-Path -Path $TempRoot -ChildPath ("{0}_{1}" -f $safeVmName, $checkpointTs)
-            try {
-                if (Test-Path -Path $vmTemp) { Remove-Item -Path $vmTemp -Recurse -Force -ErrorAction SilentlyContinue }
-                New-Item -Path $vmTemp -ItemType Directory -Force | Out-Null
-                LocalLog ("Created per-VM export folder: {0}" -f $vmTemp)
-            } catch {
-                LocalLog ("Failed to create per-VM export folder {0}: {1}" -f $vmTemp, $_)
-                throw
-            }
+             # create per-vm temp folder with timestamp suffix derived from checkpoint (when available)
+             $vmTemp = Join-Path -Path $TempRoot -ChildPath ("{0}_{1}" -f $safeVmName, $checkpointTs)
+             try {
+                 if (Test-Path -Path $vmTemp) { Remove-Item -Path $vmTemp -Recurse -Force -ErrorAction SilentlyContinue }
+                 New-Item -Path $vmTemp -ItemType Directory -Force | Out-Null
+                 LocalLog ("Created per-VM export folder: {0}" -f $vmTemp)
+             } catch {
+                 LocalLog ("Failed to create per-VM export folder {0}: {1}" -f $vmTemp, $_)
+                 throw
+             }
 
-            $result.TempPath = $vmTemp
-             $archivePattern = "$safeVmName*.7z"
-             $destArchivePath = $null
+             $result.TempPath = $vmTemp
+              $archivePattern = "$safeVmName*.7z"
+              $destArchivePath = $null
 
              # Replace lingering Assert-NotCancelled call sites
 
@@ -560,14 +560,14 @@ foreach ($vm in $vms) {
                     $psi.RedirectStandardError = $true
                     $psi.CreateNoWindow = $true
                     $psi.WorkingDirectory = $vmTemp
-                    
+
                     $proc = New-Object System.Diagnostics.Process
                     $proc.StartInfo = $psi
                     $proc.Start() | Out-Null
                     $sevenZipPid = $proc.Id
-                    
+
                     LocalLog ("Started 7z process (PID: {0})" -f $sevenZipPid)
-                    
+
                     # Set process priority to Idle
                     try {
                         $proc.PriorityClass = 'Idle'
@@ -575,8 +575,8 @@ foreach ($vm in $vms) {
                     } catch {
                         LocalLog ("Failed to set 7z process priority: {0}" -f $_)
                     }
-                    
-                    # Read output asynchronously and parse for progress
+
+                    # Read output and parse for progress. Avoid blocking ReadLine() so cancellation is responsive.
                     $lastProgress = -1
                     while (-not $proc.HasExited) {
                         if (IsCancelled) {
@@ -593,55 +593,49 @@ foreach ($vm in $vms) {
                             throw "Operation cancelled by user"
                         }
 
-                        $line = $proc.StandardOutput.ReadLine()
-                        if ($line) {
-                            # Parse progress: 7z outputs lines like "  5%" or " 15%"
-                            if ($line -match '^\s*(\d+)%') {
-                                $currentProgress = [int]$Matches[1]
-                                # Only log progress in 10% increments to reduce output spam
-                                if ($currentProgress -ge ($lastProgress + 10)) {
-                                    $archiveLeafForProgress = if ($tempArchive) { Split-Path -Path $tempArchive -Leaf } else { "" }
-                                    if ($archiveLeafForProgress) {
-                                        LocalLog ("[7z] {0}: Archiving progress: {1}%" -f $archiveLeafForProgress, $currentProgress)
-                                    } else {
-                                        LocalLog ("[7z] Archiving progress: {0}%" -f $currentProgress)
+                        try {
+                            while (-not $proc.StandardOutput.EndOfStream) {
+                                $line = $proc.StandardOutput.ReadLine()
+                                if ($line -and ($line -match '^\s*(\d+)%')) {
+                                    $currentProgress = [int]$Matches[1]
+                                    if ($currentProgress -ge ($lastProgress + 10)) {
+                                        $archiveLeafForProgress = if ($tempArchive) { Split-Path -Path $tempArchive -Leaf } else { "" }
+                                        if ($archiveLeafForProgress) {
+                                            LocalLog ("[7z] {0}: Archiving progress: {1}%" -f $archiveLeafForProgress, $currentProgress)
+                                        } else {
+                                            LocalLog ("[7z] Archiving progress: {0}%" -f $currentProgress)
+                                        }
+                                        $lastProgress = $currentProgress
                                     }
-                                    $lastProgress = $currentProgress
                                 }
                             }
+                        } catch {
+                            # Ignore stream read errors and fall back to exit code.
                         }
-                        Start-Sleep -Milliseconds 100
+
+                        Start-Sleep -Milliseconds 200
                     }
-                    
-                    # Read any remaining output
-                    $remainingOutput = $proc.StandardOutput.ReadToEnd()
-                    $errorOutput = $proc.StandardError.ReadToEnd()
-                    
+
+                    # Drain any remaining output (best-effort)
+                    try { $null = $proc.StandardOutput.ReadToEnd() } catch {}
+                    $errorOutput = $null
+                    try { $errorOutput = $proc.StandardError.ReadToEnd() } catch {}
+
                     if ($errorOutput) {
                         LocalLog ("7z stderr: {0}" -f $errorOutput)
                     }
-                    
+
                     $exit = $proc.ExitCode
                     LocalLog ("7z process (PID: {0}) exited with code: {1}" -f $sevenZipPid, $exit)
-                    
-                    # Check if archive was created
-                    if (Test-Path $tempArchive) {
-                        $archiveSize = (Get-Item $tempArchive).Length
-                        LocalLog ("7z archive created: {0} (size: {1} bytes)" -f $tempArchive, $archiveSize)
-                    } else {
-                        LocalLog ("WARNING: 7z archive not found at: {0}" -f $tempArchive)
-                    }
-                    
-                    # Only throw if exit code is non-zero
+
                     if ($exit -ne 0) {
                         throw "7z exited with non-zero code $exit"
                     }
-                    
+
                 } catch {
                     LocalLog ("Error while running 7z process: {0}" -f $_)
                     LocalLog ("7z command was: {0} {1}" -f $sevenZip, ($args -join ' '))
 
-                    # Best-effort delete partial temp archive on any error/cancel
                     try {
                         if ($tempArchive -and (Test-Path -LiteralPath $tempArchive)) {
                             Remove-Item -LiteralPath $tempArchive -Force -ErrorAction SilentlyContinue
@@ -652,12 +646,10 @@ foreach ($vm in $vms) {
                     throw
                 } finally {
                     if ($proc) {
-                        try { 
-                            if (-not $proc.HasExited) { 
-                                $proc.Kill() 
-                            }
-                            $proc.Dispose() 
+                        try {
+                            if (-not $proc.HasExited) { $proc.Kill() }
                         } catch {}
+                        try { $proc.Dispose() } catch {}
                     }
                 }
             } finally {
@@ -1024,39 +1016,33 @@ $consoleHandler = [ConsoleCancelEventHandler]{
             try {
                 $jobState = $j.State
                 Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Stopping job: $($j.Name) (ID: $($j.Id), State: $jobState)"
-                Stop-Job -Job $j -ErrorAction SilentlyContinue
-                Start-Sleep -Milliseconds 500
-                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Job stop requested: $($j.Name)"
+                Stop-Job -Job $j -Force -ErrorAction SilentlyContinue
             } catch {
                 Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error stopping job $($j.Id): $_"
             }
         }
-        
-        # Wait a bit more for cleanup operations to complete in the jobs
+
+        # Give the jobs a moment to run their finally/cleanup blocks and flush output
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Waiting for job cleanup to complete..."
-        Start-Sleep -Seconds 2
-        
-        # Collect any output from the jobs' cleanup operations
+        try { Wait-Job -Job $perVmJobs -Timeout 3 -ErrorAction SilentlyContinue | Out-Null } catch {}
+
         foreach ($j in $perVmJobs) {
             try {
                 $cleanupOutput = Receive-Job -Job $j -ErrorAction SilentlyContinue
-                if ($cleanupOutput) {
-                    $cleanupOutput | ForEach-Object { Write-Output $_ }
-                }
+                if ($cleanupOutput) { $cleanupOutput | ForEach-Object { Write-Output $_ } }
             } catch {}
         }
-        
-        # Kill all 7z.exe processes that might be running from this script
+
+        # Kill any 7z.exe processes that reference our temp root or destination
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Terminating any running 7z.exe processes..."
         try {
             $sevenZipProcesses = Get-Process -Name "7z" -ErrorAction SilentlyContinue
             if ($sevenZipProcesses) {
                 foreach ($proc in $sevenZipProcesses) {
                     try {
-                        # Check if the process command line contains our temp or destination paths to avoid killing unrelated 7z processes
                         $procCmd = (Get-CimInstance Win32_Process -Filter "ProcessId = $($proc.Id)" -ErrorAction SilentlyContinue).CommandLine
                         if ($procCmd -and ($procCmd -like "*$script:TempRootForCleanup*" -or $procCmd -like "*$script:DateDestinationForCleanup*")) {
-                            $proc.Kill()
+                            try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
                             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Killed 7z.exe process (PID: $($proc.Id))"
                         }
                     } catch {
@@ -1069,16 +1055,28 @@ $consoleHandler = [ConsoleCancelEventHandler]{
         } catch {
             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error checking for 7z processes: $_"
         }
-        
+
+        # Kill Hyper-V export workers referencing our temp root to ensure exports are actually cancelled.
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Terminating any running export worker processes (vmwp/vmms) referencing temp root..."
+        try {
+            $tempRootPrefix = $script:TempRootForCleanup
+            $candidates = Get-CimInstance Win32_Process -Filter "Name='vmwp.exe' OR Name='vmms.exe'" -ErrorAction SilentlyContinue
+            foreach ($c in ($candidates | Where-Object { $_.CommandLine -and ($_.CommandLine -like "*$tempRootPrefix*") })) {
+                try {
+                    Stop-Process -Id $c.ProcessId -Force -ErrorAction SilentlyContinue
+                    Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Killed $($c.Name) (PID: $($c.ProcessId))"
+                } catch {}
+            }
+        } catch {
+            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error checking export worker processes: $_"
+        }
+
         # Clean up temp folders - this catches any incomplete exports
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Cleaning up temporary folders..."
         try {
-            $tempPattern = Join-Path $script:TempRootForCleanup '*'
             $tempItems = Get-ChildItem -Path $script:TempRootForCleanup -ErrorAction SilentlyContinue
             if ($tempItems) {
-                $itemCount = $tempItems.Count
-                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Found $itemCount temp items to remove..."
-                foreach ($item in $tempItems) {
+                foreach ($item in ($tempItems | Where-Object { $_.Name -ne (Split-Path -Path $CancelSentinel -Leaf) })) {
                     try {
                         Remove-Item -Path $item.FullName -Recurse -Force -ErrorAction SilentlyContinue
                         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Removed: $($item.Name)"
@@ -1090,19 +1088,17 @@ $consoleHandler = [ConsoleCancelEventHandler]{
         } catch {
             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error during temp cleanup: $_"
         }
-        
+
         # Additional VM cleanup - ensure any export snapshots are removed and VMs are restarted
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Checking for orphaned export snapshots..."
         try {
-            # Get all VMs that match the original pattern
             $allVms = Get-VM -Name $NamePattern -ErrorAction SilentlyContinue
             if ($allVms) {
                 foreach ($vm in $allVms) {
                     try {
-                        # Look for export snapshots (they start with "export_")
-                        $exportSnapshots = Get-VMSnapshot -VMName $vm.Name -ErrorAction SilentlyContinue | 
+                        $exportSnapshots = Get-VMSnapshot -VMName $vm.Name -ErrorAction SilentlyContinue |
                             Where-Object { $_.Name -like "export_*" }
-                        
+
                         if ($exportSnapshots) {
                             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Found orphaned snapshot(s) for VM: $($vm.Name)"
                             foreach ($snap in $exportSnapshots) {
@@ -1115,8 +1111,7 @@ $consoleHandler = [ConsoleCancelEventHandler]{
                                 }
                             }
                         }
-                        
-                        # Check if VM needs to be restarted (if it's Off but was likely running)
+
                         if ($vm.State -eq 'Off') {
                             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  VM $($vm.Name) is Off, attempting to start..."
                             try {
@@ -1134,7 +1129,7 @@ $consoleHandler = [ConsoleCancelEventHandler]{
         } catch {
             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error during VM cleanup: $_"
         }
-        
+
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  *** Shutdown complete - Exiting ***"
         Write-Output ""
     } catch {

@@ -135,6 +135,7 @@ try { if (Test-Path $CancelSentinel) { Remove-Item -Path $CancelSentinel -Force 
 # Build per-date destination folder YYYYMMDD under $Destination
 $DateFolderName = (Get-Date).ToString("yyyyMMdd")
 $DateDestination = Join-Path -Path $Destination -ChildPath $DateFolderName
+Log ("Ensuring destination folder exists: {0}" -f $DateDestination)
 try {
     if (-not (Test-Path -Path $DateDestination)) {
         New-Item -Path $DateDestination -ItemType Directory -Force | Out-Null

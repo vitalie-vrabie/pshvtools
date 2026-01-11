@@ -1039,23 +1039,28 @@ $consoleHandler = [ConsoleCancelEventHandler]{
         try { New-Item -Path $CancelSentinel -ItemType File -Force | Out-Null } catch {}
 
         Write-Output ""
-        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  *** Ctrl+C received: Initiating graceful shutdown ***"
-        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Stopping all background jobs and triggering cleanup..."
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  *** Ctrl+C caught (CancelKeyPress). Beginning cancellation... ***"
 
+        $total = ($perVmJobs | Measure-Object).Count
+        $running = ($perVmJobs | Where-Object { $_.State -eq 'Running' } | Measure-Object).Count
+        $completed = ($perVmJobs | Where-Object { $_.State -in @('Completed','Failed','Stopped') } | Measure-Object).Count
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Jobs: total=$total, running=$running, already done=$completed"
+
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Cancelling per-VM background jobs (Stop-Job -Force)..."
         foreach ($j in $perVmJobs) {
             try {
                 $jobState = $j.State
-                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Stopping job: $($j.Name) (ID: $($j.Id), State: $jobState)"
+                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Cancelling job: $($j.Name) (ID: $($j.Id), State: $jobState)"
                 Stop-Job -Job $j -Force -ErrorAction SilentlyContinue
             } catch {
-                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error stopping job $($j.Id): $_"
+                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error cancelling job $($j.Id): $_"
             }
         }
 
-        # Give the jobs a moment to run their finally/cleanup blocks and flush output
-        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Waiting for job cleanup to complete..."
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Waiting briefly for per-VM job cleanup/finally blocks..."
         try { Wait-Job -Job $perVmJobs -Timeout 3 -ErrorAction SilentlyContinue | Out-Null } catch {}
 
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Draining any remaining job output..."
         foreach ($j in $perVmJobs) {
             try {
                 $cleanupOutput = Receive-Job -Job $j -ErrorAction SilentlyContinue
@@ -1064,63 +1069,68 @@ $consoleHandler = [ConsoleCancelEventHandler]{
         }
 
         # Kill any 7z.exe processes that reference our temp root or destination
-        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Terminating any running 7z.exe processes..."
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Cancelling compression: terminating any running 7z.exe for this run..."
         try {
             $sevenZipProcesses = Get-Process -Name "7z" -ErrorAction SilentlyContinue
+            $killed7z = 0
             if ($sevenZipProcesses) {
                 foreach ($proc in $sevenZipProcesses) {
                     try {
                         $procCmd = (Get-CimInstance Win32_Process -Filter "ProcessId = $($proc.Id)" -ErrorAction SilentlyContinue).CommandLine
                         if ($procCmd -and ($procCmd -like "*$script:TempRootForCleanup*" -or $procCmd -like "*$script:DateDestinationForCleanup*")) {
                             try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
-                            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Killed 7z.exe process (PID: $($proc.Id))"
+                            $killed7z++
+                            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Killed 7z.exe (PID: $($proc.Id))"
                         }
                     } catch {
                         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Failed to kill 7z.exe (PID: $($proc.Id)): $_"
                     }
                 }
-            } else {
-                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  No 7z.exe processes found"
             }
+            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  7z.exe cancellation complete (killed=$killed7z)"
         } catch {
-            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error checking for 7z processes: $_"
+            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error checking/killing 7z processes: $_"
         }
 
         # Kill Hyper-V export workers referencing our temp root to ensure exports are actually cancelled.
-        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Terminating any running export worker processes (vmwp/vmms) referencing temp root..."
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Cancelling exports: terminating any vmwp/vmms export workers referencing temp root..."
         try {
             $tempRootPrefix = $script:TempRootForCleanup
+            $killedWorkers = 0
             $candidates = Get-CimInstance Win32_Process -Filter "Name='vmwp.exe' OR Name='vmms.exe'" -ErrorAction SilentlyContinue
             foreach ($c in ($candidates | Where-Object { $_.CommandLine -and ($_.CommandLine -like "*$tempRootPrefix*") })) {
                 try {
                     Stop-Process -Id $c.ProcessId -Force -ErrorAction SilentlyContinue
+                    $killedWorkers++
                     Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Killed $($c.Name) (PID: $($c.ProcessId))"
                 } catch {}
             }
+            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Export-worker cancellation complete (killed=$killedWorkers)"
         } catch {
             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error checking export worker processes: $_"
         }
 
         # Clean up temp folders - this catches any incomplete exports
-        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Cleaning up temporary folders..."
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Cleaning up temporary folders under: $script:TempRootForCleanup"
         try {
             $tempItems = Get-ChildItem -Path $script:TempRootForCleanup -ErrorAction SilentlyContinue
+            $removedTemp = 0
             if ($tempItems) {
                 foreach ($item in ($tempItems | Where-Object { $_.Name -ne (Split-Path -Path $CancelSentinel -Leaf) })) {
                     try {
                         Remove-Item -Path $item.FullName -Recurse -Force -ErrorAction SilentlyContinue
-                        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Removed: $($item.Name)"
+                        $removedTemp++
+                        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Removed temp item: $($item.Name)"
                     } catch {}
                 }
-            } else {
-                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  No temp items to clean up"
             }
+            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Temp cleanup complete (removed=$removedTemp)"
         } catch {
             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error during temp cleanup: $_"
         }
 
         # Additional VM cleanup - ensure any export snapshots are removed and VMs are restarted
-        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Checking for orphaned export snapshots..."
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Final VM cleanup: removing export_* checkpoints and restarting any Off VMs (best-effort)..."
         try {
             $allVms = Get-VM -Name $NamePattern -ErrorAction SilentlyContinue
             if ($allVms) {
@@ -1130,7 +1140,7 @@ $consoleHandler = [ConsoleCancelEventHandler]{
                             Where-Object { $_.Name -like "export_*" }
 
                         if ($exportSnapshots) {
-                            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Found orphaned snapshot(s) for VM: $($vm.Name)"
+                            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  VM $($vm.Name): removing $($exportSnapshots.Count) export_* snapshot(s)..."
                             foreach ($snap in $exportSnapshots) {
                                 try {
                                     Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Removing snapshot: $($snap.Name)"
@@ -1143,7 +1153,7 @@ $consoleHandler = [ConsoleCancelEventHandler]{
                         }
 
                         if ($vm.State -eq 'Off') {
-                            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  VM $($vm.Name) is Off, attempting to start..."
+                            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  VM $($vm.Name) is Off; starting..."
                             try {
                                 Start-VM -Name $vm.Name -ErrorAction Stop
                                 Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  VM $($vm.Name) started"
@@ -1160,15 +1170,13 @@ $consoleHandler = [ConsoleCancelEventHandler]{
             Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error during VM cleanup: $_"
         }
 
-        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  *** Shutdown complete - Exiting ***"
+        Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  *** Cancellation sequence complete. Exiting... ***"
         Write-Output ""
     } catch {
         Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Error in Ctrl+C handler: $_"
     }
     $e.Cancel = $true
 }
-
-[Console]::add_CancelKeyPress($consoleHandler)
 
 Log ("Monitoring {0} jobs and streaming output..." -f $perVmJobs.Count)
 

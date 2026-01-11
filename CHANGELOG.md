@@ -9,8 +9,10 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ### Added
 
 ### Changed
+- Docs: updated backup examples to include `-ThreadCap` and refreshed installer version references.
 
 ### Fixed
+- Backup: Ctrl+C output now explicitly reports what is being cancelled (jobs, 7z, export workers, temp cleanup, checkpoints/VM restart).
 
 ## [1.0.5] - 2026-01-09
 

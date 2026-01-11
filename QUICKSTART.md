@@ -88,6 +88,9 @@ hvbak -NamePattern "*" -Destination "D:\backups"
 
 # Use custom temp folder
 hvbak -NamePattern "*" -TempFolder "E:\temp"
+
+# Limit 7-Zip CPU threads (passed to 7z as -mmt=<n>)
+hvbak -NamePattern "*" -ThreadCap 4
 ```
 
 ### Advanced Options

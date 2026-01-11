@@ -13,7 +13,7 @@ Prerequisite: **Inno Setup 6**
 installer\Build-InnoSetupInstaller.bat
 ```
 
-**Output:** `dist\\PSHVTools-Setup-1.0.3.exe`
+**Output:** `dist\\PSHVTools-Setup-1.0.6.exe`
 
 ---
 
@@ -27,7 +27,7 @@ installer\Build-InnoSetupInstaller.bat
 ## Silent Installation (end users)
 
 ```cmd
-PSHVTools-Setup-1.0.3.exe /VERYSILENT /NORESTART
+PSHVTools-Setup-1.0.6.exe /VERYSILENT /NORESTART
 ```
 
 ---
@@ -42,7 +42,7 @@ Get-Command -Module pshvtools
 hvbak -NamePattern "*"
 
 # Restore (from hvbak archives)
-hvrecover -WhatIf
+hvrestore -VmName "MyVM" -BackupRoot "$env:USERPROFILE\hvbak-archives" -Latest -NoNetwork
 
 # Recover orphaned VMs (re-register configs)
 hvrecover -WhatIf
@@ -52,4 +52,4 @@ hvrecover -WhatIf
 
 ## Notes
 
-The repository no longer uses MSBuild packaging scripts. The distributable artifact is the GUI installer EXE built via Inno Setup.
+The repository uses an Inno Setup based installer for the primary distributable artifact.

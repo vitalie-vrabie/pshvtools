@@ -24,6 +24,7 @@ A PowerShell module + Inno Setup GUI installer for **PSHVTools**  Hyper-V VM ba
 - `README.md` - Main project overview
 - `QUICKSTART.md` - Quick start guide for users
 - `BUILD_GUIDE.md` - Build instructions
+- `installer\INNO_SETUP_INSTALLER.md` - Installer documentation
 - `LICENSE.txt` - MIT license
 
 ---
@@ -42,7 +43,7 @@ installer\Build-InnoSetupInstaller.bat
 ```
 
 **Output:**
-- `dist\PSHVTools-Setup-1.0.3.exe`
+- `dist\PSHVTools-Setup-1.0.6.exe`
 
 ---
 
@@ -68,6 +69,9 @@ Import-Module pshvtools
 
 # backup
 hvbak -NamePattern "*"
+
+# backup (cap 7-Zip CPU threads)
+hvbak -NamePattern "*" -ThreadCap 4
 
 # restore latest for a VM (in-place to a specific folder)
 hvrestore -VmName "MyVM" -Latest -DestinationRoot "D:\RestoredVMs" -NoNetwork

@@ -16,9 +16,10 @@ PSHVTools is a PowerShell module for backing up and managing Hyper-V virtual mac
 - Live VM backups using Production checkpoints
 - Parallel processing of multiple VMs
 - 7-Zip compression with multithreading
+- Optional 7-Zip thread capping (`-ThreadCap`)
 - Configurable backup retention (keep 1-100 copies per VM)
 - Progress tracking with real-time status
-- Graceful cancellation (Ctrl+C support)
+- Graceful cancellation (Ctrl+C support) with explicit cancellation output
 - Low-priority compression (Idle CPU class)
 - VHD/VHDX permission repair utility
 - Restore/import from `hvbak` `.7z` backups (with optional network switch mapping)
@@ -31,19 +32,19 @@ PSHVTools is a PowerShell module for backing up and managing Hyper-V virtual mac
 
 ### GUI Installer (Recommended for End Users)
 
-1. Download `PSHVTools-Setup-1.0.5.exe`
+1. Download `PSHVTools-Setup-1.0.6.exe`
 2. Double-click to run the installer
 3. Follow the wizard
 4. Done
 
 **Silent install:**
 ```cmd
-PSHVTools-Setup-1.0.5.exe /VERYSILENT /NORESTART
+PSHVTools-Setup-1.0.6.exe /VERYSILENT /NORESTART
 ```
 
 ### PowerShell Installer (Alternative)
 
-1. Download and extract `PSHVTools-Setup-1.0.5.zip`
+1. Download and extract `PSHVTools-Setup-1.0.6.zip`
 2. Right-click `Install.ps1` -> "Run with PowerShell" (as Administrator)
 
 **Command line install:**
@@ -62,6 +63,9 @@ Import-Module pshvtools
 
 # Backup VMs
 hvbak -NamePattern "*"
+
+# Backup VMs while limiting 7-Zip CPU threads
+hvbak -NamePattern "*" -ThreadCap 4
 
 # Restore VMs
 hvrestore -VmName "MyVM" -Latest
@@ -129,12 +133,14 @@ Backs up Hyper-V VMs using checkpoints and 7-Zip compression.
 - `TempFolder` - Temporary export folder (default: `$env:TEMP\hvbak`)
 - `ForceTurnOff` - Force VM power off if checkpoint fails (default: $true)
 - `KeepCount` - Number of backups to keep per VM (default: 2, range: 1-100)
+- `ThreadCap` - Optional cap for 7-Zip threads (passed as `7z -mmt=<n>`)
 
 **Examples:**
 ```powershell
 hvbak -NamePattern "*"
 hv-bak -NamePattern "srv-*" -Destination "D:\Backups"
 hvbak -NamePattern "web-*" -KeepCount 5
+hvbak -NamePattern "*" -ThreadCap 4
 ```
 
 ### Restore-VMBackup (alias: hvrestore)

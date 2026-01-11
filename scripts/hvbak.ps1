@@ -92,6 +92,11 @@ param(
     [int]$ThreadCap
 )
 
+# Allow passing VM name as first raw arg (e.g. from cmd files) even if caller forgets -NamePattern
+if ([string]::IsNullOrWhiteSpace($NamePattern) -and $args.Count -ge 1 -and -not [string]::IsNullOrWhiteSpace([string]$args[0])) {
+    $NamePattern = [string]$args[0]
+}
+
 # Display help if no NamePattern provided
 if ([string]::IsNullOrWhiteSpace($NamePattern)) {
     Get-Help $MyInvocation.MyCommand.Path -Full
@@ -99,8 +104,14 @@ if ([string]::IsNullOrWhiteSpace($NamePattern)) {
 }
 
 # --- Logging ---
-function Log { param([string]$Text) $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss"); Write-Output "$ts  $Text" }
+function Log {
+    param([string]$Text)
+    $ts = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+    Write-Output "$ts  $Text"
+    try { [Console]::Out.Flush() } catch {}
+}
 
+Log ("Invoke-VMBackup starting. NamePattern='{0}', Destination='{1}', TempFolder='{2}'" -f $NamePattern, $Destination, $TempFolder)
 # --- Configuration ---
 $ShutdownTimeoutSeconds = 180
 $PollIntervalSeconds = 5

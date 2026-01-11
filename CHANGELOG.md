@@ -9,6 +9,12 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ### Added
 
 ### Changed
+
+### Fixed
+
+## [1.0.6] - 2026-01-11
+
+### Changed
 - Docs: updated backup examples to include `-ThreadCap` and refreshed installer version references.
 
 ### Fixed

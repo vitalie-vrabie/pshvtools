@@ -1,6 +1,6 @@
 # PSHVTools - PowerShell Hyper-V Tools
 
-**Version:** 1.0.6  
+**Version:** 1.0.7  
 **Product Name:** PSHVTools (PowerShell Hyper-V Tools)  
 **Module Name:** pshvtools  
 **Commands:** `Invoke-VMBackup`, `Repair-VhdAcl`, `Restore-VMBackup`, `Restore-OrphanedVMs` and aliases: `hvbak`, `hv-bak`, `fix-vhd-acl`, `hvrestore`, `hvrecover`  
@@ -32,19 +32,19 @@ PSHVTools is a PowerShell module for backing up and managing Hyper-V virtual mac
 
 ### GUI Installer (Recommended for End Users)
 
-1. Download `PSHVTools-Setup-1.0.6.exe`
+1. Download `PSHVTools-Setup-1.0.7.exe`
 2. Double-click to run the installer
 3. Follow the wizard
 4. Done
 
 **Silent install:**
 ```cmd
-PSHVTools-Setup-1.0.6.exe /VERYSILENT /NORESTART
+PSHVTools-Setup-1.0.7.exe /VERYSILENT /NORESTART
 ```
 
 ### PowerShell Installer (Alternative)
 
-1. Download and extract `PSHVTools-Setup-1.0.6.zip`
+1. Download and extract `PSHVTools-Setup-1.0.7.zip`
 2. Right-click `Install.ps1` -> "Run with PowerShell" (as Administrator)
 
 **Command line install:**
@@ -225,7 +225,7 @@ Build-Release.bat clean
 ### Installation Commands
 ```powershell
 # GUI installer (silent)
-PSHVTools-Setup-1.0.5.exe /VERYSILENT /NORESTART
+PSHVTools-Setup-1.0.7.exe /VERYSILENT /NORESTART
 
 # PowerShell installer (silent)
 .\Install.ps1 -Silent
@@ -310,7 +310,7 @@ Copyright (c) 2026 Vitalie Vrabie
 ## ?? Getting Started
 
 ### For End Users
-1. Download `PSHVTools-Setup-1.0.5.exe`
+1. Download `PSHVTools-Setup-1.0.7.exe`
 2. Run the installer
 3. Import the module: `Import-Module pshvtools`
 4. Start backing up VMs: `hvbak -NamePattern "*"`
@@ -325,5 +325,5 @@ Copyright (c) 2026 Vitalie Vrabie
 
 ## ?? Version History
 
-### Version 1.0.5 (2026)
-- Development in progress.
+### Version 1.0.6 (2026)
+- See [CHANGELOG.md](CHANGELOG.md)

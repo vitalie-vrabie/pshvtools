@@ -1,24 +1,23 @@
-# PSHVTools v1.0.5
+# PSHVTools v1.0.6
 
-Release date: 2026-01-09
+Release date: 2026-01-11
 
-> This is the release notes for the tagged release `v1.0.5`.
-> For ongoing development toward the next release (e.g. v1.0.6), see `CHANGELOG.md` under **[Unreleased]**.
+> This is the release notes for the tagged release `v1.0.6`.
+> For ongoing development toward the next release (e.g. v1.0.7), see `CHANGELOG.md` under **[Unreleased]**.
 
 ## Highlights
 
-- Backup: temp folder creation aligned to checkpoint timestamp and de-duplicated to improve export/cleanup reliability.
-- Utility: added GPU partition adapter removal helper and module alias (`nogpup`).
+- Backup: Ctrl+C output now explicitly reports what is being cancelled (jobs, 7z, export workers, temp cleanup, checkpoints/VM restart).
+- Docs: backup examples updated to include `-ThreadCap` and refreshed installer version references.
 
 ## Changes
 
-### Added
-- Utility: `scripts/remove-gpu-partitions.ps1` to remove GPU partition adapters from VMs matched by wildcard name.
-- Module: `nogpup` alias to run GPU-partition removal through `pshvtools`.
+### Changed
+- Docs: updated backup examples to include `-ThreadCap` and refreshed installer version references.
 
 ### Fixed
-- Backup: avoid duplicate per-VM temp export folder creation which could interfere with cleanup.
+- Backup: Ctrl+C output now explicitly reports what is being cancelled (jobs, 7z, export workers, temp cleanup, checkpoints/VM restart).
 
 ## Installer / packaging
 
-- GUI installer (Inno Setup): `dist\PSHVTools-Setup-1.0.5.exe`
+- GUI installer (Inno Setup): `dist\PSHVTools-Setup-1.0.6.exe`

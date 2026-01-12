@@ -3,7 +3,7 @@
 ; Version 1.0.6
 
 #define MyAppName "PSHVTools"
-#define MyAppVersion "1.0.6"
+#define MyAppVersion "1.0.7"
 #define MyAppPublisher "Vitalie Vrabie"
 #define MyAppURL "https://github.com/vitalie-vrabie/pshvtools"
 #define MyAppDescription "PowerShell Hyper-V Tools - VM Backup Utilities"

@@ -1,6 +1,6 @@
 # PSHVTools - PowerShell Hyper-V Tools
 
-**Version:** 1.0.6  
+**Version:** 1.0.7  
 **Product Name:** PSHVTools (PowerShell Hyper-V Tools)  
 **Module Name:** pshvtools  
 **Commands:** `Invoke-VMBackup`, `Repair-VhdAcl`, `Restore-VMBackup`, `Restore-OrphanedVMs` and aliases: `hvbak`, `hv-bak`, `fix-vhd-acl`, `hvrestore`, `hvrecover`  
@@ -319,5 +319,5 @@ Copyright (c) 2026 Vitalie Vrabie
 
 ## ?? Version History
 
-### Version 1.0.6 (2026)
+### Version 1.0.7 (Unreleased)
 - See `CHANGELOG.md`.

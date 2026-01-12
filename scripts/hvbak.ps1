@@ -164,7 +164,7 @@ if (-not $sevenZip) {
 Log ("7-Zip found: {0}" -f $sevenZip)
 
 # Get matching VMs
-try { $vms = Get-VM -Name $NamePattern -ErrorAction Stop } catch { Log ("Get-VM failed or no VMs match pattern '{0}': {1}" -f $NamePattern, $_); exit 0 }
+try { $vms = Get-VM -Name $NamePattern -ErrorAction Stop } catch { Log ("Get-VM failed or no VMs match pattern '{0}'": {1}" -f $NamePattern, $_); exit 0 }
 if (-not $vms) { Log ("No VMs found matching pattern '{0}'." -f $NamePattern); exit 0 }
 
 Log "Starting all per-vm jobs (no throttling). 7z processes will be set to Idle priority."
@@ -379,67 +379,109 @@ foreach ($vm in $vms) {
                 $baselineVmwpPids = @()
                 try { $baselineVmwpPids = @(Get-Process -Name vmwp -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id) } catch { $baselineVmwpPids = @() }
 
-                # Run Export-VM in a child job so we can stop it promptly on Ctrl+C cancellation
-                $exportJob = $null
-                try {
-                    $exportJob = Start-Job -ArgumentList $vmName, $vmTemp -ScriptBlock {
-                        param($n, $p)
-                        Import-Module Hyper-V -ErrorAction SilentlyContinue | Out-Null
-                        Export-VM -Name $n -Path $p -ErrorAction Stop
-                    }
+                function Invoke-ExportVmOnce {
+                    param([string]$CurrentVmName, [string]$CurrentVmTemp)
 
-                    while ($true) {
-                        if (IsCancelled) {
-                            LocalLog ("Cancellation detected during Export-VM, stopping export job for {0}" -f $vmName)
-                            try { Stop-Job -Job $exportJob -Force -ErrorAction SilentlyContinue } catch {}
+                    $exportJob = $null
+                    try {
+                        $exportJob = Start-Job -ArgumentList $CurrentVmName, $CurrentVmTemp -ScriptBlock {
+                            param($n, $p)
+                            Import-Module Hyper-V -ErrorAction SilentlyContinue | Out-Null
+                            Export-VM -Name $n -Path $p -ErrorAction Stop
+                        }
 
-                            # Attempt to stop the underlying Hyper-V export worker as well
-                            try { Stop-ExportProcesses -VmName $vmName -BaselineVmwpPids $baselineVmwpPids -ExportRoot $vmTemp } catch {}
+                        while ($true) {
+                            if (IsCancelled) {
+                                LocalLog ("Cancellation detected during Export-VM, stopping export job for {0}" -f $CurrentVmName)
+                                try { Stop-Job -Job $exportJob -Force -ErrorAction SilentlyContinue } catch {}
 
-                            # Best-effort cleanup of partial export output
+                                try { Stop-ExportProcesses -VmName $CurrentVmName -BaselineVmwpPids $baselineVmwpPids -ExportRoot $CurrentVmTemp } catch {}
+
+                                try {
+                                    if ($CurrentVmTemp -and (Test-Path -LiteralPath $CurrentVmTemp)) {
+                                        LocalLog ("Cancellation cleanup: Removing incomplete export folder: {0}" -f $CurrentVmTemp)
+                                        Remove-Item -LiteralPath $CurrentVmTemp -Recurse -Force -ErrorAction SilentlyContinue
+                                    }
+                                } catch {}
+
+                                $result.Success = $false
+                                $result.Message = "Export-VM cancelled by user"
+                                throw "Operation cancelled by user"
+                            }
+
+                            if ($exportJob.State -in @('Completed','Failed','Stopped')) {
+                                break
+                            }
+
+                            Start-Sleep -Seconds 1
+                        }
+
+                        if ($exportJob.State -eq 'Stopped') {
+                            LocalLog ("Export-VM job was stopped/cancelled for {0}. Cleaning up temp data and failing job." -f $CurrentVmName)
                             try {
-                                if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
-                                    LocalLog ("Cancellation cleanup: Removing incomplete export folder: {0}" -f $vmTemp)
-                                    Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction SilentlyContinue
+                                if ($CurrentVmTemp -and (Test-Path -LiteralPath $CurrentVmTemp)) {
+                                    Remove-Item -LiteralPath $CurrentVmTemp -Recurse -Force -ErrorAction SilentlyContinue
+                                    LocalLog ("Removed incomplete export folder: {0}" -f $CurrentVmTemp)
                                 }
                             } catch {}
 
                             $result.Success = $false
-                            $result.Message = "Export-VM cancelled by user"
-                            throw "Operation cancelled by user"
+                            $result.Message = "Export-VM was cancelled/stopped"
+                            throw "Export-VM was cancelled/stopped"
                         }
 
-                        if ($exportJob.State -in @('Completed','Failed','Stopped')) {
-                            break
-                        }
+                        $null = Receive-Job -Job $exportJob -ErrorAction Stop
 
-                        Start-Sleep -Seconds 1
+                        if ($exportJob.State -ne 'Completed') {
+                            throw "Export-VM job did not complete successfully (state: $($exportJob.State))"
+                        }
+                    } finally {
+                        if ($exportJob) {
+                            try { Remove-Job -Job $exportJob -Force -ErrorAction SilentlyContinue } catch {}
+                        }
                     }
+                }
 
-                    # If Export-VM was cancelled/stopped (e.g., Hyper-V Manager cancellation), treat that as a failure.
-                    if ($exportJob.State -eq 'Stopped') {
-                        LocalLog ("Export-VM job was stopped/cancelled for {0}. Cleaning up temp data and failing job." -f $vmName)
-                        try {
-                            if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
-                                Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction SilentlyContinue
-                                LocalLog ("Removed incomplete export folder: {0}" -f $vmTemp)
+                $exportAttempt = 1
+                $maxExportAttempts = 2
+                $didTurnOffForGpuRetry = $false
+
+                while ($exportAttempt -le $maxExportAttempts) {
+                    try {
+                        Invoke-ExportVmOnce -CurrentVmName $vmName -CurrentVmTemp $vmTemp
+                        break
+                    } catch {
+                        $errTxt = $_.ToString()
+                        $isGpuPartitionError = ($errTxt -match 'GPU\s*P' -or $errTxt -match 'GPU\s*partition' -or $errTxt -match 'GPUP')
+
+                        if ($exportAttempt -lt $maxExportAttempts -and $isGpuPartitionError) {
+                            try {
+                                $vmStateNow = (Get-VM -Name $vmName -ErrorAction SilentlyContinue).State
+                                LocalLog ("Export failed due to GPU partition assignment for {0}. Current state: {1}. Turning off VM and retrying export..." -f $vmName, $vmStateNow)
+
+                                if ($vmStateNow -ne 'Off') {
+                                    Stop-VM -Name $vmName -TurnOff -Force -ErrorAction Stop
+                                    $didTurnOffForGpuRetry = $true
+                                    $vmWasTurnedOff = $true
+                                    LocalLog ("VM {0} turned off for GPU export retry" -f $vmName)
+                                }
+
+                                try {
+                                    if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
+                                        Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction SilentlyContinue
+                                    }
+                                    New-Item -Path $vmTemp -ItemType Directory -Force | Out-Null
+                                } catch {}
+
+                                $exportAttempt++
+                                continue
+                            } catch {
+                                LocalLog ("Failed to turn off {0} for GPU export retry: {1}" -f $vmName, $_)
+                                throw
                             }
-                        } catch {}
+                        }
 
-                        $result.Success = $false
-                        $result.Message = "Export-VM was cancelled/stopped"
-                        throw "Export-VM was cancelled/stopped"
-                    }
-
-                    # Bubble up any errors from the export job
-                    $null = Receive-Job -Job $exportJob -ErrorAction Stop
-
-                    if ($exportJob.State -ne 'Completed') {
-                        throw "Export-VM job did not complete successfully (state: $($exportJob.State))"
-                    }
-                } finally {
-                    if ($exportJob) {
-                        try { Remove-Job -Job $exportJob -Force -ErrorAction SilentlyContinue } catch {}
+                        throw
                     }
                 }
 

@@ -196,7 +196,7 @@ foreach ($vm in $vms) {
         function LocalLog { 
             param($t) 
             $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-            # Sanitize the message to avoid XML serialization issues
+            # Sanitize the message to avoid XML serialization errors
             $sanitized = $t -replace '[^\x20-\x7E\r\n\t]', '?'
             Write-Output "$ts  $sanitized"
         }
@@ -256,6 +256,36 @@ foreach ($vm in $vms) {
                     } catch {}
                 }
             } catch {
+            }
+        }
+
+        function Cleanup-CheckpointIfExists {
+            param(
+                [string]$VmName,
+                [string]$SnapshotName,
+                $SnapshotId
+            )
+
+            if (-not $SnapshotName) { return }
+
+            try {
+                $snapToRemove = $null
+                try {
+                    if ($SnapshotId) {
+                        $snapToRemove = Get-VMSnapshot -VMName $VmName -ErrorAction SilentlyContinue | Where-Object { $_.Id -eq $SnapshotId } | Select-Object -First 1
+                    }
+                } catch {}
+
+                if (-not $snapToRemove) {
+                    $snapToRemove = Get-VMSnapshot -VMName $VmName -Name $SnapshotName -ErrorAction SilentlyContinue | Select-Object -First 1
+                }
+
+                if ($snapToRemove) {
+                    LocalLog ("Removing snapshot due to aborted export: {0}" -f $SnapshotName)
+                    $snapToRemove | Remove-VMSnapshot -ErrorAction Stop
+                }
+            } catch {
+                LocalLog ("Failed to remove snapshot '{0}' after aborted export: {1}" -f $SnapshotName, $_)
             }
         }
 
@@ -397,6 +427,8 @@ foreach ($vm in $vms) {
 
                                 try { Stop-ExportProcesses -VmName $CurrentVmName -BaselineVmwpPids $baselineVmwpPids -ExportRoot $CurrentVmTemp } catch {}
 
+                                try { Cleanup-CheckpointIfExists -VmName $CurrentVmName -SnapshotName $snapshotName -SnapshotId $snapshotId } catch {}
+
                                 try {
                                     if ($CurrentVmTemp -and (Test-Path -LiteralPath $CurrentVmTemp)) {
                                         LocalLog ("Cancellation cleanup: Removing incomplete export folder: {0}" -f $CurrentVmTemp)
@@ -418,6 +450,9 @@ foreach ($vm in $vms) {
 
                         if ($exportJob.State -eq 'Stopped') {
                             LocalLog ("Export-VM job was stopped/cancelled for {0}. Cleaning up temp data and failing job." -f $CurrentVmName)
+
+                            try { Cleanup-CheckpointIfExists -VmName $CurrentVmName -SnapshotName $snapshotName -SnapshotId $snapshotId } catch {}
+
                             try {
                                 if ($CurrentVmTemp -and (Test-Path -LiteralPath $CurrentVmTemp)) {
                                     Remove-Item -LiteralPath $CurrentVmTemp -Recurse -Force -ErrorAction SilentlyContinue

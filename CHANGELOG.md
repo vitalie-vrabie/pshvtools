@@ -12,6 +12,12 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Fixed
 
+## [1.0.7] - 2026-01-16
+
+### Added
+- Module: `Clone-VM` command (aliases: `hvclone`, `hv-clone`) to clone a VM using export + import copy.
+- Docs: added clone examples in `samples/` and refreshed primary documentation.
+
 ## [1.0.6] - 2026-01-12
 
 ### Fixed

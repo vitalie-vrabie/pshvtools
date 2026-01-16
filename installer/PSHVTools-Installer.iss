@@ -1,9 +1,9 @@
 ; PSHVTools Inno Setup Script
 ; Creates a professional Windows installer with GUI wizard
-; Version 1.0.6
+; Version 1.0.8
 
 #define MyAppName "PSHVTools"
-#define MyAppVersion "1.0.7"
+#define MyAppVersion "1.0.8"
 #define MyAppPublisher "Vitalie Vrabie"
 #define MyAppURL "https://github.com/vitalie-vrabie/pshvtools"
 #define MyAppDescription "PowerShell Hyper-V Tools - VM Backup Utilities"

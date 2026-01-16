@@ -112,6 +112,60 @@ begin
   Result := T;
 end;
 
+function ExtractNextVersionPart(var S: String): Integer;
+var
+  i: Integer;
+  n: String;
+begin
+  // Skip any leading non-digits
+  i := 1;
+  while (i <= Length(S)) and (S[i] < '0') or (S[i] > '9') do
+    i := i + 1;
+
+  // Read digits
+  n := '';
+  while (i <= Length(S)) and (S[i] >= '0') and (S[i] <= '9') do
+  begin
+    n := n + S[i];
+    i := i + 1;
+  end;
+
+  // Advance beyond separators
+  while (i <= Length(S)) and (S[i] <> '0') and (S[i] <> '1') and (S[i] <> '2') and (S[i] <> '3') and (S[i] <> '4') and (S[i] <> '5') and (S[i] <> '6') and (S[i] <> '7') and (S[i] <> '8') and (S[i] <> '9') do
+    i := i + 1;
+
+  Delete(S, 1, i - 1);
+
+  if n = '' then
+    Result := 0
+  else
+    Result := StrToIntDef(n, 0);
+end;
+
+function CompareSemVer(const A, B: String): Integer;
+var
+  aWork: String;
+  bWork: String;
+  aPart: Integer;
+  bPart: Integer;
+  i: Integer;
+begin
+  // Returns: -1 if A < B, 0 if equal, 1 if A > B
+  aWork := NormalizeVersionForCompare(A);
+  bWork := NormalizeVersionForCompare(B);
+
+  // Compare up to 4 parts (major.minor.patch.build)
+  for i := 1 to 4 do
+  begin
+    aPart := ExtractNextVersionPart(aWork);
+    bPart := ExtractNextVersionPart(bWork);
+    if aPart < bPart then begin Result := -1; exit; end;
+    if aPart > bPart then begin Result := 1; exit; end;
+  end;
+
+  Result := 0;
+end;
+
 function TryGetLatestReleaseTag(var Tag: String): Boolean;
 var
   ResultCode: Integer;
@@ -151,14 +205,16 @@ var
   LatestTag: String;
   LatestVersion: String;
   CurrentVersion: String;
+  Cmp: Integer;
 begin
   CurrentVersion := NormalizeVersionForCompare('{#MyAppVersion}');
   if TryGetLatestReleaseTag(LatestTag) then
   begin
     LatestVersion := NormalizeVersionForCompare(LatestTag);
-    if (LatestVersion <> '') and (CompareText(LatestVersion, CurrentVersion) <> 0) then
+    if (LatestVersion <> '') then
     begin
-      if CompareText(LatestVersion, CurrentVersion) > 0 then
+      Cmp := CompareSemVer(CurrentVersion, LatestVersion);
+      if Cmp < 0 then
       begin
         MsgBox(
           'A newer PSHVTools release is available on GitHub.' + #13#10 + #13#10 +
@@ -169,7 +225,7 @@ begin
           'Setup will continue, but you may be installing an outdated version.',
           mbInformation, MB_OK);
       end;
-      if CompareText(LatestVersion, CurrentVersion) < 0 then
+      if Cmp > 0 then
       begin
         MsgBox(
           'This installer appears to be a development build.' + #13#10 + #13#10 +

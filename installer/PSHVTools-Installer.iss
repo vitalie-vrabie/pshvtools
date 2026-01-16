@@ -182,29 +182,21 @@ begin
   end;
 end;
 
-function ExtractNextVersionPart(var S: String): Integer;
+function ReadSemVerPart(const S: String; var Idx: Integer): Integer;
 var
-  i: Integer;
   n: String;
 begin
-  // Skip any leading non-digits
-  i := 1;
-  while (i <= Length(S)) and ((S[i] < '0') or (S[i] > '9')) do
-    i := i + 1;
+  // Move to first digit
+  while (Idx <= Length(S)) and ((S[Idx] < '0') or (S[Idx] > '9')) do
+    Idx := Idx + 1;
 
   // Read digits
   n := '';
-  while (i <= Length(S)) and (S[i] >= '0') and (S[i] <= '9') do
+  while (Idx <= Length(S)) and (S[Idx] >= '0') and (S[Idx] <= '9') do
   begin
-    n := n + S[i];
-    i := i + 1;
+    n := n + S[Idx];
+    Idx := Idx + 1;
   end;
-
-  // Advance beyond separators
-  while (i <= Length(S)) and ((S[i] < '0') or (S[i] > '9')) do
-    i := i + 1;
-
-  Delete(S, 1, i - 1);
 
   if n = '' then
     Result := 0
@@ -219,16 +211,21 @@ var
   aPart: Integer;
   bPart: Integer;
   i: Integer;
+  aIdx: Integer;
+  bIdx: Integer;
 begin
   // Returns: -1 if A < B, 0 if equal, 1 if A > B
   aWork := NormalizeVersionForCompare(A);
   bWork := NormalizeVersionForCompare(B);
 
+  aIdx := 1;
+  bIdx := 1;
+
   // Compare up to 4 parts (major.minor.patch.build)
   for i := 1 to 4 do
   begin
-    aPart := ExtractNextVersionPart(aWork);
-    bPart := ExtractNextVersionPart(bWork);
+    aPart := ReadSemVerPart(aWork, aIdx);
+    bPart := ReadSemVerPart(bWork, bIdx);
     if aPart < bPart then begin Result := -1; exit; end;
     if aPart > bPart then begin Result := 1; exit; end;
   end;

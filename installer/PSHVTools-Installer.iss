@@ -112,6 +112,35 @@ begin
   Result := T;
 end;
 
+function TryGetCachedLatestReleaseVersion(var CachedVersion: String): Boolean;
+var
+  V: String;
+begin
+  Result := False;
+  CachedVersion := '';
+
+  if RegQueryStringValue(HKLM, 'Software\{#MyAppPublisher}\{#MyAppName}', 'LatestReleaseVersion', V) then
+  begin
+    V := Trim(V);
+    if V <> '' then
+    begin
+      CachedVersion := NormalizeVersionForCompare(V);
+      Result := True;
+      exit;
+    end;
+  end;
+end;
+
+procedure CacheLatestReleaseVersion(const LatestVersion: String);
+begin
+  // Best-effort: cache the latest GitHub release version so we can enforce dev-build warnings offline.
+  try
+    RegWriteStringValue(HKLM, 'Software\{#MyAppPublisher}\{#MyAppName}', 'LatestReleaseVersion', LatestVersion);
+  except
+    // ignore
+  end;
+end;
+
 function TryGetInstalledVersion(var InstalledVersion: String): Boolean;
 var
   V: String;
@@ -249,8 +278,17 @@ var
   Cmp: Integer;
   InstalledVersion: String;
   Resp: Integer;
+  CachedLatest: String;
 begin
   CurrentVersion := NormalizeVersionForCompare('{#MyAppVersion}');
+
+  // If we already have a cached "latest GitHub release" version, enforce dev-build consent deterministically.
+  if TryGetCachedLatestReleaseVersion(CachedLatest) then
+  begin
+    Cmp := CompareSemVer(CurrentVersion, CachedLatest);
+    if Cmp > 0 then
+      RequireDevBuildConsent(CurrentVersion, CachedLatest, 'Cached latest GitHub release');
+  end;
 
   // 1) Online check against latest GitHub release (preferred)
   if TryGetLatestReleaseTag(LatestTag) then
@@ -258,6 +296,7 @@ begin
     LatestVersion := NormalizeVersionForCompare(LatestTag);
     if (LatestVersion <> '') then
     begin
+      CacheLatestReleaseVersion(LatestVersion);
       Cmp := CompareSemVer(CurrentVersion, LatestVersion);
       if Cmp < 0 then
       begin

@@ -169,6 +169,16 @@ begin
           'Setup will continue, but you may be installing an outdated version.',
           mbInformation, MB_OK);
       end;
+      if CompareText(LatestVersion, CurrentVersion) < 0 then
+      begin
+        MsgBox(
+          'This installer appears to be a development build.' + #13#10 + #13#10 +
+          'Installed version: ' + CurrentVersion + #13#10 +
+          'Latest GitHub release: ' + LatestVersion + #13#10 + #13#10 +
+          'This version is newer than the latest published GitHub release and may be unstable.' + #13#10 +
+          'Setup will continue.',
+          mbInformation, MB_OK);
+      end;
     end;
   end;
 end;

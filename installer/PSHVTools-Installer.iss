@@ -248,6 +248,7 @@ var
   CurrentVersion: String;
   Cmp: Integer;
   InstalledVersion: String;
+  Resp: Integer;
 begin
   CurrentVersion := NormalizeVersionForCompare('{#MyAppVersion}');
 
@@ -285,7 +286,20 @@ begin
     begin
       RequireDevBuildConsent(CurrentVersion, InstalledVersion, 'Currently installed version');
     end;
+    exit;
   end;
+
+  // 3) Last-resort: cannot verify latest release and no installed version known.
+  // Require explicit acknowledgement so dev builds never install silently.
+  Resp := MsgBox(
+    'Version verification unavailable' + #13#10 + #13#10 +
+    'Setup could not verify the latest PSHVTools release online (GitHub unreachable) and no prior installed version was found.' + #13#10 + #13#10 +
+    'Installer version: ' + CurrentVersion + #13#10 + #13#10 +
+    'Agreement required: [ ] I understand and want to continue anyway.' + #13#10 + #13#10 +
+    'Click Yes to continue, or No to exit Setup.',
+    mbConfirmation, MB_YESNO);
+  if Resp <> IDYES then
+    Abort;
 end;
 
 function GetPowerShellVersion(): String;

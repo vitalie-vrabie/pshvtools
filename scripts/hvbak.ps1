@@ -500,13 +500,35 @@ foreach ($vm in $vms) {
                         if ($exportAttempt -lt $maxExportAttempts -and $isGpuPartitionError) {
                             try {
                                 $vmStateNow = (Get-VM -Name $vmName -ErrorAction SilentlyContinue).State
-                                LocalLog ("Export failed due to GPU partition assignment for {0}. Current state: {1}. Turning off VM and retrying export..." -f $vmName, $vmStateNow)
+                                LocalLog ("Export failed due to GPU partition assignment for {0}. Current state: {1}. Shutting down VM and retrying export..." -f $vmName, $vmStateNow)
 
                                 if ($vmStateNow -ne 'Off') {
-                                    Stop-VM -Name $vmName -TurnOff -Force -ErrorAction Stop
-                                    $didTurnOffForGpuRetry = $true
-                                    $vmWasTurnedOff = $true
-                                    LocalLog ("VM {0} turned off for GPU export retry" -f $vmName)
+                                    try {
+                                        LocalLog ("Requesting VM shutdown for GPU export retry: {0}" -f $vmName)
+                                        Stop-VM -Name $vmName -Shutdown -Force -ErrorAction Stop
+
+                                        $deadline = (Get-Date).AddSeconds([int]$ShutdownTimeoutSeconds)
+                                        while ((Get-Date) -lt $deadline) {
+                                            if (IsCancelled) { break }
+                                            $s = (Get-VM -Name $vmName -ErrorAction SilentlyContinue).State
+                                            if ($s -eq 'Off') { break }
+                                            Start-Sleep -Seconds $PollIntervalSeconds
+                                        }
+
+                                        $vmStateNow = (Get-VM -Name $vmName -ErrorAction SilentlyContinue).State
+                                        if ($vmStateNow -ne 'Off') {
+                                            throw "VM did not shut down within timeout"
+                                        }
+
+                                        $vmWasTurnedOff = $true
+                                        LocalLog ("VM {0} shut down for GPU export retry" -f $vmName)
+                                    } catch {
+                                        LocalLog ("Shutdown failed or timed out for {0}; forcing power off for GPU export retry: {1}" -f $vmName, $_)
+                                        Stop-VM -Name $vmName -TurnOff -Force -ErrorAction Stop
+                                        $didTurnOffForGpuRetry = $true
+                                        $vmWasTurnedOff = $true
+                                        LocalLog ("VM {0} turned off for GPU export retry" -f $vmName)
+                                    }
                                 }
 
                                 try {

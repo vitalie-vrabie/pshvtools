@@ -97,6 +97,125 @@ function Invoke-VMBackup {
         return
     }
 
+function Clone-VM {
+    <#
+    .SYNOPSIS
+      Clone a Hyper-V VM into a new VM in a specified folder.
+
+    .DESCRIPTION
+      Exports the source VM to a temporary folder, then imports it using Copy mode with a new VM Id
+      and renames the imported VM to NewName.
+
+      The clone is placed under DestinationRoot (a new subfolder named after NewName is created).
+
+    .PARAMETER SourceVmName
+      Name of the existing VM to clone.
+
+    .PARAMETER NewName
+      Name of the new cloned VM.
+
+    .PARAMETER DestinationRoot
+      Folder where the new VM files will be stored.
+
+    .PARAMETER TempFolder
+      Temporary folder used for the Hyper-V export step.
+
+    .PARAMETER Force
+      If a VM named NewName already exists, remove it before importing.
+    #>
+
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+    param(
+        [Parameter(Mandatory = $true, Position = 0)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SourceVmName,
+
+        [Parameter(Mandatory = $true, Position = 1)]
+        [ValidateNotNullOrEmpty()]
+        [string]$NewName,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$DestinationRoot,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$TempFolder = "$env:TEMP\\hvclone",
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Force
+    )
+
+    Set-StrictMode -Version Latest
+
+    try {
+        Import-Module Hyper-V -ErrorAction Stop | Out-Null
+    } catch {
+        throw "Hyper-V module is required. Run on a Hyper-V host with the Hyper-V PowerShell module installed. $_"
+    }
+
+    $src = Get-VM -Name $SourceVmName -ErrorAction Stop
+
+    if ($SourceVmName -eq $NewName) {
+        throw "NewName must be different from SourceVmName."
+    }
+
+    $existing = Get-VM -Name $NewName -ErrorAction SilentlyContinue
+    if ($existing -and -not $Force) {
+        throw "A VM named '$NewName' already exists. Use -Force to remove it before cloning."
+    }
+
+    if ($existing -and $Force) {
+        if ($PSCmdlet.ShouldProcess($NewName, 'Remove existing VM')) {
+            try {
+                if ($existing.State -ne 'Off') {
+                    Stop-VM -VM $existing -TurnOff -Force -ErrorAction SilentlyContinue
+                }
+            } catch {}
+
+            Remove-VM -VM $existing -Force -ErrorAction Stop
+        }
+    }
+
+    $destVmRoot = Join-Path -Path $DestinationRoot -ChildPath $NewName
+    if (-not (Test-Path -LiteralPath $destVmRoot)) {
+        New-Item -Path $destVmRoot -ItemType Directory -Force | Out-Null
+    }
+
+    $exportRoot = Join-Path -Path $TempFolder -ChildPath ("{0}_{1}" -f ($SourceVmName -replace '[\\/:*?\"<>|]', '_'), (Get-Date).ToString('yyyyMMddHHmmss'))
+    if (Test-Path -LiteralPath $exportRoot) {
+        Remove-Item -LiteralPath $exportRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    New-Item -Path $exportRoot -ItemType Directory -Force | Out-Null
+
+    $importedVm = $null
+    try {
+        if ($PSCmdlet.ShouldProcess($SourceVmName, "Export VM to '$exportRoot'")) {
+            Export-VM -VM $src -Path $exportRoot -ErrorAction Stop
+        }
+
+        if ($PSCmdlet.ShouldProcess($NewName, "Import cloned VM into '$destVmRoot'")) {
+            $importedVm = Import-VM -Path $exportRoot -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -VirtualMachinePath $destVmRoot -SnapshotFilePath $destVmRoot -ErrorAction Stop
+        }
+
+        if ($importedVm) {
+            if ($PSCmdlet.ShouldProcess($importedVm.Name, "Rename VM to '$NewName'")) {
+                Rename-VM -VM $importedVm -NewName $NewName -ErrorAction Stop
+            }
+        }
+
+        if ($importedVm) {
+            $importedVm | Get-VM
+        }
+    } finally {
+        try {
+            if (Test-Path -LiteralPath $exportRoot) {
+                Remove-Item -LiteralPath $exportRoot -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        } catch {}
+    }
+}
+
     # Get the path to the actual script
     $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "hvbak.ps1"
     
@@ -124,6 +243,127 @@ function Invoke-VMBackup {
 
     # Execute the script
     & $scriptPath @params
+}
+
+function Clone-VM {
+    <#
+    .SYNOPSIS
+      Clone a Hyper-V VM into a new VM in a specified folder.
+
+    .DESCRIPTION
+      Exports the source VM to a temporary folder, then imports it using Copy mode with a new VM Id
+      and renames the imported VM to NewName.
+
+      The clone is placed under DestinationRoot (a new subfolder named after NewName is created).
+
+    .PARAMETER SourceVmName
+      Name of the existing VM to clone.
+
+    .PARAMETER NewName
+      Name of the new cloned VM.
+
+    .PARAMETER DestinationRoot
+      Folder where the new VM files will be stored.
+
+    .PARAMETER TempFolder
+      Temporary folder used for the Hyper-V export step.
+
+    .PARAMETER Force
+      If a VM named NewName already exists, remove it before importing.
+
+    .EXAMPLE
+      hvclone -SourceVmName 'BaseWin11' -NewName 'Win11-Dev01' -DestinationRoot 'D:\\Hyper-V'
+    #>
+
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+    param(
+        [Parameter(Mandatory = $true, Position = 0)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SourceVmName,
+
+        [Parameter(Mandatory = $true, Position = 1)]
+        [ValidateNotNullOrEmpty()]
+        [string]$NewName,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$DestinationRoot,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$TempFolder = "$env:TEMP\\hvclone",
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Force
+    )
+
+    Set-StrictMode -Version Latest
+
+    try {
+        Import-Module Hyper-V -ErrorAction Stop | Out-Null
+    } catch {
+        throw "Hyper-V module is required. Run on a Hyper-V host with the Hyper-V PowerShell module installed. $_"
+    }
+
+    if ($SourceVmName -eq $NewName) {
+        throw "NewName must be different from SourceVmName."
+    }
+
+    $src = Get-VM -Name $SourceVmName -ErrorAction Stop
+
+    $existing = Get-VM -Name $NewName -ErrorAction SilentlyContinue
+    if ($existing -and -not $Force) {
+        throw "A VM named '$NewName' already exists. Use -Force to remove it before cloning."
+    }
+
+    if ($existing -and $Force) {
+        if ($PSCmdlet.ShouldProcess($NewName, 'Remove existing VM')) {
+            try {
+                if ($existing.State -ne 'Off') {
+                    Stop-VM -VM $existing -TurnOff -Force -ErrorAction SilentlyContinue
+                }
+            } catch {}
+
+            Remove-VM -VM $existing -Force -ErrorAction Stop
+        }
+    }
+
+    $destVmRoot = Join-Path -Path $DestinationRoot -ChildPath $NewName
+    if (-not (Test-Path -LiteralPath $destVmRoot)) {
+        New-Item -Path $destVmRoot -ItemType Directory -Force | Out-Null
+    }
+
+    $safeSrcName = $SourceVmName -replace '[\\/:*?\"<>|]', '_'
+    $exportRoot = Join-Path -Path $TempFolder -ChildPath ("{0}_{1}" -f $safeSrcName, (Get-Date).ToString('yyyyMMddHHmmss'))
+    if (Test-Path -LiteralPath $exportRoot) {
+        Remove-Item -LiteralPath $exportRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    New-Item -Path $exportRoot -ItemType Directory -Force | Out-Null
+
+    $importedVm = $null
+    try {
+        if ($PSCmdlet.ShouldProcess($SourceVmName, "Export VM to '$exportRoot'")) {
+            Export-VM -VM $src -Path $exportRoot -ErrorAction Stop
+        }
+
+        if ($PSCmdlet.ShouldProcess($NewName, "Import cloned VM into '$destVmRoot'")) {
+            $importedVm = Import-VM -Path $exportRoot -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -VirtualMachinePath $destVmRoot -SnapshotFilePath $destVmRoot -ErrorAction Stop
+        }
+
+        if ($importedVm -and $PSCmdlet.ShouldProcess($importedVm.Name, "Rename VM to '$NewName'")) {
+            Rename-VM -VM $importedVm -NewName $NewName -ErrorAction Stop
+        }
+
+        if ($importedVm) {
+            $importedVm | Get-VM
+        }
+    } finally {
+        try {
+            if (Test-Path -LiteralPath $exportRoot) {
+                Remove-Item -LiteralPath $exportRoot -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        } catch {}
+    }
 }
 
 function Repair-VhdAcl {
@@ -424,6 +664,8 @@ New-Alias -Name fix-vhd-acl -Value Repair-VhdAcl -Force
 New-Alias -Name hvrestore -Value Restore-VMBackup -Force
 New-Alias -Name hvrecover -Value Restore-OrphanedVMs -Force
 New-Alias -Name nogpup -Value Remove-GpuPartitions -Force
+New-Alias -Name hvclone -Value Clone-VM -Force
+New-Alias -Name hv-clone -Value Clone-VM -Force
 
 # Export the functions and aliases
-Export-ModuleMember -Function Invoke-VMBackup, Repair-VhdAcl, Restore-VMBackup, Restore-OrphanedVMs, Remove-GpuPartitions -Alias hvbak, hv-bak, fix-vhd-acl, hvrestore, hvrecover, nogpup
+Export-ModuleMember -Function Invoke-VMBackup, Repair-VhdAcl, Restore-VMBackup, Restore-OrphanedVMs, Remove-GpuPartitions, Clone-VM -Alias hvbak, hv-bak, fix-vhd-acl, hvrestore, hvrecover, nogpup, hvclone, hv-clone

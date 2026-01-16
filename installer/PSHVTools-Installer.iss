@@ -102,6 +102,77 @@ var
   PowerShellVersionPage: TOutputMsgMemoWizardPage;
   RequirementsOK: Boolean;
 
+function NormalizeVersionForCompare(const S: String): String;
+var
+  T: String;
+begin
+  T := Trim(S);
+  if (Length(T) > 0) and ((T[1] = 'v') or (T[1] = 'V')) then
+    Delete(T, 1, 1);
+  Result := T;
+end;
+
+function TryGetLatestReleaseTag(var Tag: String): Boolean;
+var
+  ResultCode: Integer;
+  TmpFile: String;
+  PsArgs: String;
+  TagAnsi: AnsiString;
+begin
+  Result := False;
+  Tag := '';
+  TmpFile := ExpandConstant('{tmp}\\pshvtools_latest_release_tag.txt');
+  DeleteFile(TmpFile);
+
+  PsArgs :=
+    '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command ' +
+    '"$ErrorActionPreference=''Stop''; ' +
+    '$repo=''' + '{#MyAppURL}' + '''; ' +
+    '$api=$repo.TrimEnd(''/'') + ''/releases/latest''; ' +
+    'try { $r=Invoke-WebRequest -UseBasicParsing -Uri $api -MaximumRedirection 0 -ErrorAction Stop } catch { $r=$_.Exception.Response }; ' +
+    'if(-not $r){ exit 2 }; ' +
+    '$loc=$r.Headers[''Location'']; if(-not $loc){ exit 3 }; ' +
+    '$tag=($loc -split ''/'')[-1]; if([string]::IsNullOrWhiteSpace($tag)){ exit 4 }; ' +
+    'Set-Content -LiteralPath ''' + TmpFile + ''' -Value $tag -Encoding ASCII; exit 0"';
+
+  if not Exec('powershell.exe', PsArgs, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    exit;
+  if ResultCode <> 0 then
+    exit;
+  if not LoadStringFromFile(TmpFile, TagAnsi) then
+    exit;
+
+  Tag := Trim(String(TagAnsi));
+  Result := (Tag <> '');
+end;
+
+procedure WarnIfOutdatedInstaller();
+var
+  LatestTag: String;
+  LatestVersion: String;
+  CurrentVersion: String;
+begin
+  CurrentVersion := NormalizeVersionForCompare('{#MyAppVersion}');
+  if TryGetLatestReleaseTag(LatestTag) then
+  begin
+    LatestVersion := NormalizeVersionForCompare(LatestTag);
+    if (LatestVersion <> '') and (CompareText(LatestVersion, CurrentVersion) <> 0) then
+    begin
+      if CompareText(LatestVersion, CurrentVersion) > 0 then
+      begin
+        MsgBox(
+          'A newer PSHVTools release is available on GitHub.' + #13#10 + #13#10 +
+          'Installed version: ' + CurrentVersion + #13#10 +
+          'Latest version:    ' + LatestVersion + #13#10 + #13#10 +
+          'You can download the latest installer from:' + #13#10 +
+          '{#MyAppURL}' + #13#10 + #13#10 +
+          'Setup will continue, but you may be installing an outdated version.',
+          mbInformation, MB_OK);
+      end;
+    end;
+  end;
+end;
+
 function GetPowerShellVersion(): String;
 begin
   Result := '5.1';  // Assume minimum version if check fails
@@ -162,6 +233,9 @@ end;
 procedure InitializeWizard();
 begin
   RequirementsOK := True;
+
+  // Best-effort online check; do not block installation.
+  WarnIfOutdatedInstaller();
   
   // Create a custom page to show requirements check
   PowerShellVersionPage := CreateOutputMsgMemoPage(wpWelcome,

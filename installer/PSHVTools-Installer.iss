@@ -160,7 +160,7 @@ var
 begin
   // Skip any leading non-digits
   i := 1;
-  while (i <= Length(S)) and (S[i] < '0') or (S[i] > '9') do
+  while (i <= Length(S)) and ((S[i] < '0') or (S[i] > '9')) do
     i := i + 1;
 
   // Read digits
@@ -172,7 +172,7 @@ begin
   end;
 
   // Advance beyond separators
-  while (i <= Length(S)) and (S[i] <> '0') and (S[i] <> '1') and (S[i] <> '2') and (S[i] <> '3') and (S[i] <> '4') and (S[i] <> '5') and (S[i] <> '6') and (S[i] <> '7') and (S[i] <> '8') and (S[i] <> '9') do
+  while (i <= Length(S)) and ((S[i] < '0') or (S[i] > '9')) do
     i := i + 1;
 
   Delete(S, 1, i - 1);

@@ -408,6 +408,11 @@ begin
   DevBuildConsentCheck.Top := ScaleY(8);
   DevBuildConsentCheck.Width := DevBuildConsentPage.SurfaceWidth;
   DevBuildConsentCheck.Caption := 'I understand and want to continue.';
+
+  // Deterministic dev-build guard (no network dependency).
+  // If this installer version is higher than the last stable release, require explicit consent.
+  if CompareSemVer('{#MyAppVersion}', '{#MyAppLatestStableVersion}') > 0 then
+    RequireDevBuildConsent(NormalizeVersionForCompare('{#MyAppVersion}'), NormalizeVersionForCompare('{#MyAppLatestStableVersion}'), 'Latest stable release');
   
   // Create a custom page to show requirements check
   PowerShellVersionPage := CreateOutputMsgMemoPage(DevBuildConsentPage.ID,
@@ -426,12 +431,7 @@ end;
 
 function InitializeSetup(): Boolean;
 begin
-  // Deterministic dev-build guard (no network dependency).
-  // If this installer version is higher than the last stable release, require explicit consent.
-  if CompareSemVer('{#MyAppVersion}', '{#MyAppLatestStableVersion}') > 0 then
-    RequireDevBuildConsent(NormalizeVersionForCompare('{#MyAppVersion}'), NormalizeVersionForCompare('{#MyAppLatestStableVersion}'), 'Latest stable release');
-
-  WarnIfOutdatedInstaller();
+  // Keep setup initialization non-interactive; wizard pages and prompts should be handled in InitializeWizard.
   Result := True;
 end;
 

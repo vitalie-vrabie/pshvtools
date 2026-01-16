@@ -101,7 +101,10 @@ Root: HKLM; Subkey: "Software\{#MyAppPublisher}\{#MyAppName}"; ValueType: string
 [Code]
 var
   PowerShellVersionPage: TOutputMsgMemoWizardPage;
+  DevBuildConsentPage: TWizardPage;
+  DevBuildConsentCheck: TNewCheckBox;
   RequirementsOK: Boolean;
+  NeedsDevBuildConsent: Boolean;
 
 function NormalizeVersionForCompare(const S: String): String;
 var
@@ -163,23 +166,17 @@ begin
 end;
 
 procedure RequireDevBuildConsent(const CurrentVersion, ReferenceVersion, ReferenceLabel: String);
-var
-  Resp: Integer;
 begin
-  Resp := MsgBox(
-    'Development build warning' + #13#10 + #13#10 +
-    'You are about to install a development build of PSHVTools.' + #13#10 + #13#10 +
-    'Installer version: ' + CurrentVersion + #13#10 +
-    ReferenceLabel + ': ' + ReferenceVersion + #13#10 + #13#10 +
-    'This build may be unstable.' + #13#10 + #13#10 +
-    'Agreement required: I understand and want to continue.' + #13#10 + #13#10 +
-    'Click Yes to agree and continue, or No to exit Setup.',
-    mbConfirmation, MB_YESNO);
-
-  if Resp <> IDYES then
+  NeedsDevBuildConsent := True;
+  if DevBuildConsentPage <> nil then
   begin
-    MsgBox('Setup was cancelled because the development build warning was not accepted.', mbInformation, MB_OK);
-    Abort;
+    DevBuildConsentPage.Caption := 'Development build warning';
+    DevBuildConsentPage.Description :=
+      'This installer appears to be a development build.' + #13#10 +
+      'Installer version: ' + CurrentVersion + #13#10 +
+      ReferenceLabel + ': ' + ReferenceVersion + #13#10 + #13#10 +
+      'This build may be unstable. You must acknowledge before continuing.';
+    DevBuildConsentCheck.Checked := False;
   end;
 end;
 
@@ -399,6 +396,18 @@ end;
 procedure InitializeWizard();
 begin
   RequirementsOK := True;
+  NeedsDevBuildConsent := False;
+
+  // Dev-build consent page (shown only when needed)
+  DevBuildConsentPage := CreateCustomPage(wpWelcome,
+    'Development build warning',
+    '');
+  DevBuildConsentCheck := TNewCheckBox.Create(DevBuildConsentPage);
+  DevBuildConsentCheck.Parent := DevBuildConsentPage.Surface;
+  DevBuildConsentCheck.Left := ScaleX(0);
+  DevBuildConsentCheck.Top := ScaleY(8);
+  DevBuildConsentCheck.Width := DevBuildConsentPage.SurfaceWidth;
+  DevBuildConsentCheck.Caption := 'I understand and want to continue.';
   
   // Create a custom page to show requirements check
   PowerShellVersionPage := CreateOutputMsgMemoPage(wpWelcome,
@@ -406,6 +415,13 @@ begin
     'Please wait while Setup checks if your system meets the requirements.',
     'Setup is checking for PowerShell 5.1+ and Hyper-V...',
     '');
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := False;
+  if (DevBuildConsentPage <> nil) and (PageID = DevBuildConsentPage.ID) then
+    Result := not NeedsDevBuildConsent;
 end;
 
 function InitializeSetup(): Boolean;
@@ -426,6 +442,17 @@ var
   Message: String;
 begin
   Result := True;
+
+  // Enforce dev-build checkbox agreement
+  if (DevBuildConsentPage <> nil) and (CurPageID = DevBuildConsentPage.ID) then
+  begin
+    if not DevBuildConsentCheck.Checked then
+    begin
+      MsgBox('You must check "I understand and want to continue." to proceed.', mbError, MB_OK);
+      Result := False;
+      exit;
+    end;
+  end;
 
   if CurPageID = wpWelcome then
   begin

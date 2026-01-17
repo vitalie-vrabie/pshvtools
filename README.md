@@ -68,10 +68,10 @@ hvbak -NamePattern "*"
 hvrestore -VmName "MyVM" -Latest
 
 # Fix VHD permissions
-fix-vhd-acl -WhatIf
+fix-vhd-acl
 
 # Recover orphaned VMs
-hvrecover -WhatIf
+hvrecover
 
 # Clone a VM
 hvclone -SourceVmName "BaseWin11" -NewName "Win11-Dev01" -DestinationRoot "D:\Hyper-V"
@@ -92,7 +92,7 @@ Removes all GPU partition adapters from Hyper-V VMs matching a wildcard pattern.
 ```powershell
 # Script
 .\scripts\remove-gpu-partitions.ps1 -NamePattern "lab-*"
-.\scripts\remove-gpu-partitions.ps1 -NamePattern "*" -WhatIf
+.\scripts\remove-gpu-partitions.ps1 -NamePattern "*"
 
 # Module alias (after: Import-Module pshvtools)
 nogpup -NamePattern "lab-*"
@@ -254,10 +254,10 @@ hvbak -NamePattern "*"
 hvrestore -VmName "MyVM" -Latest
 
 # Recover orphaned VMs
-hvrecover -WhatIf
+hvrecover
 
 # Fix VHD permissions
-fix-vhd-acl -WhatIf
+fix-vhd-acl
 
 # Clone a VM
 hvclone -SourceVmName "BaseWin11" -NewName "Win11-Dev01" -DestinationRoot "D:\Hyper-V"

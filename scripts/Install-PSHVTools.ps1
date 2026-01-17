@@ -121,5 +121,5 @@ Write-Host "  hvbak -NamePattern '*'" -ForegroundColor White
 Write-Host "  hv-bak -NamePattern 'srv-*'" -ForegroundColor White
 Write-Host "  hvclone -SourceVmName 'BaseWin11' -NewName 'Win11-Dev01' -DestinationRoot 'D:\\Hyper-V'" -ForegroundColor White
 Write-Host "  hv-clone -SourceVmName 'BaseWin11' -NewName 'Win11-Dev02' -DestinationRoot 'D:\\Hyper-V'" -ForegroundColor White
-Write-Host "  fix-vhd-acl -WhatIf" -ForegroundColor White
+Write-Host "  fix-vhd-acl" -ForegroundColor White
 Write-Host ""

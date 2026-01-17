@@ -241,11 +241,6 @@ foreach ($o in $orphans) {
 
     foreach ($p in $tryPaths) {
         try {
-            if (-not $PSCmdlet.ShouldProcess($p, "Import-VM ($Mode) for orphaned config $($o.Id)")) {
-                $imported = 'WhatIf'
-                break
-            }
-
             Write-Log "Attempting Import-VM from: $p"
             $imported = Import-VM -Path $p @importParams
             break
@@ -255,11 +250,9 @@ foreach ($o in $orphans) {
         }
     }
 
-    if ($imported -and $imported -ne 'WhatIf') {
+    if ($imported) {
         Write-Log "Registered VM: $($imported.Name) (Id: $($imported.Id))"
         $results.Add([PSCustomObject]@{ Id = $o.Id; Path = $o.Path; Success = $true; VmName = $imported.Name; Message = 'Imported' })
-    } elseif ($imported -eq 'WhatIf') {
-        $results.Add([PSCustomObject]@{ Id = $o.Id; Path = $o.Path; Success = $true; VmName = $null; Message = 'WhatIf' })
     } else {
         $msg = if ($lastErr) { $lastErr.Exception.Message } else { 'Import failed' }
         $results.Add([PSCustomObject]@{ Id = $o.Id; Path = $o.Path; Success = $false; VmName = $null; Message = $msg })

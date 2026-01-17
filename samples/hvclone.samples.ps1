@@ -34,5 +34,4 @@ hvclone -SourceVmName 'BaseWin11' -NewName 'Win11-Dev03' -DestinationRoot 'D:\Hy
 #    - Imports the new clone
 hvclone -SourceVmName 'BaseWin11' -NewName 'Win11-Dev03' -DestinationRoot 'D:\Hyper-V' -Force
 
-# 5) Preview actions without changing anything
-hvclone -SourceVmName 'BaseWin11' -NewName 'Win11-WhatIf' -DestinationRoot 'D:\Hyper-V' -WhatIf
+

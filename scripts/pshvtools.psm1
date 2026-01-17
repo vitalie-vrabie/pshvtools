@@ -124,7 +124,7 @@ function Clone-VM {
       If a VM named NewName already exists, remove it before importing.
     #>
 
-    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [ValidateNotNullOrEmpty()]
@@ -166,15 +166,13 @@ function Clone-VM {
     }
 
     if ($existing -and $Force) {
-        if ($PSCmdlet.ShouldProcess($NewName, 'Remove existing VM')) {
-            try {
-                if ($existing.State -ne 'Off') {
-                    Stop-VM -VM $existing -TurnOff -Force -ErrorAction SilentlyContinue
-                }
-            } catch {}
+        try {
+            if ($existing.State -ne 'Off') {
+                Stop-VM -VM $existing -TurnOff -Force -ErrorAction SilentlyContinue
+            }
+        } catch {}
 
-            Remove-VM -VM $existing -Force -ErrorAction Stop
-        }
+        Remove-VM -VM $existing -Force -ErrorAction Stop
     }
 
     $destVmRoot = Join-Path -Path $DestinationRoot -ChildPath $NewName
@@ -190,18 +188,12 @@ function Clone-VM {
 
     $importedVm = $null
     try {
-        if ($PSCmdlet.ShouldProcess($SourceVmName, "Export VM to '$exportRoot'")) {
-            Export-VM -VM $src -Path $exportRoot -ErrorAction Stop
-        }
+        Export-VM -VM $src -Path $exportRoot -ErrorAction Stop
 
-        if ($PSCmdlet.ShouldProcess($NewName, "Import cloned VM into '$destVmRoot'")) {
-            $importedVm = Import-VM -Path $exportRoot -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -VirtualMachinePath $destVmRoot -SnapshotFilePath $destVmRoot -ErrorAction Stop
-        }
+        $importedVm = Import-VM -Path $exportRoot -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -VirtualMachinePath $destVmRoot -SnapshotFilePath $destVmRoot -ErrorAction Stop
 
         if ($importedVm) {
-            if ($PSCmdlet.ShouldProcess($importedVm.Name, "Rename VM to '$NewName'")) {
-                Rename-VM -VM $importedVm -NewName $NewName -ErrorAction Stop
-            }
+            Rename-VM -VM $importedVm -NewName $NewName -ErrorAction Stop
         }
 
         if ($importedVm) {
@@ -275,7 +267,7 @@ function Clone-VM {
       hvclone -SourceVmName 'BaseWin11' -NewName 'Win11-Dev01' -DestinationRoot 'D:\\Hyper-V'
     #>
 
-    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [ValidateNotNullOrEmpty()]
@@ -317,15 +309,13 @@ function Clone-VM {
     }
 
     if ($existing -and $Force) {
-        if ($PSCmdlet.ShouldProcess($NewName, 'Remove existing VM')) {
-            try {
-                if ($existing.State -ne 'Off') {
-                    Stop-VM -VM $existing -TurnOff -Force -ErrorAction SilentlyContinue
-                }
-            } catch {}
+        try {
+            if ($existing.State -ne 'Off') {
+                Stop-VM -VM $existing -TurnOff -Force -ErrorAction SilentlyContinue
+            }
+        } catch {}
 
-            Remove-VM -VM $existing -Force -ErrorAction Stop
-        }
+        Remove-VM -VM $existing -Force -ErrorAction Stop
     }
 
     $destVmRoot = Join-Path -Path $DestinationRoot -ChildPath $NewName
@@ -342,15 +332,11 @@ function Clone-VM {
 
     $importedVm = $null
     try {
-        if ($PSCmdlet.ShouldProcess($SourceVmName, "Export VM to '$exportRoot'")) {
-            Export-VM -VM $src -Path $exportRoot -ErrorAction Stop
-        }
+        Export-VM -VM $src -Path $exportRoot -ErrorAction Stop
 
-        if ($PSCmdlet.ShouldProcess($NewName, "Import cloned VM into '$destVmRoot'")) {
-            $importedVm = Import-VM -Path $exportRoot -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -VirtualMachinePath $destVmRoot -SnapshotFilePath $destVmRoot -ErrorAction Stop
-        }
+        $importedVm = Import-VM -Path $exportRoot -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -VirtualMachinePath $destVmRoot -SnapshotFilePath $destVmRoot -ErrorAction Stop
 
-        if ($importedVm -and $PSCmdlet.ShouldProcess($importedVm.Name, "Rename VM to '$NewName'")) {
+        if ($importedVm) {
             Rename-VM -VM $importedVm -NewName $NewName -ErrorAction Stop
         }
 
@@ -379,7 +365,6 @@ function Repair-VhdAcl {
         - -VhdFolder <path>: recursively process *.vhd, *.vhdx under the folder.
         - -VhdListCsv <path>: CSV with columns Path and optional VMId (GUID without braces).
       
-      Use -WhatIf to preview actions without making changes.
 
     .PARAMETER VhdFolder
       Path to folder containing VHD/VHDX files to fix recursively.
@@ -389,10 +374,6 @@ function Repair-VhdAcl {
 
     .PARAMETER LogFile
       Path to log file. Default: C:\Temp\FixVhdAcl.log
-
-    .EXAMPLE
-      Repair-VhdAcl -WhatIf
-      Preview ACL fixes for all VMs on the host
 
     .EXAMPLE
       Repair-VhdAcl -VhdFolder "D:\Restores"
@@ -412,7 +393,7 @@ function Repair-VhdAcl {
       - Available as 'Repair-VhdAcl' and 'fix-vhd-acl' commands
     #>
 
-    [CmdletBinding(SupportsShouldProcess = $true)]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
         [string]$VhdFolder,
@@ -435,11 +416,6 @@ function Repair-VhdAcl {
     # Build parameter splatting
     $params = @{
         LogFile = $LogFile
-    }
-
-    # Forward -WhatIf from the built-in common parameter
-    if ($PSBoundParameters.ContainsKey('WhatIf')) {
-        $params.WhatIf = $true
     }
 
     if ($VhdFolder) {
@@ -472,7 +448,7 @@ function Restore-VMBackup {
       hvrestore -VmName "MyVM" -BackupRoot "D:\hvbak-archives" -Latest -DestinationRoot "D:\RestoredVMs" -NoNetwork
     #>
 
-    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
         [string]$BackupPath,
@@ -572,7 +548,7 @@ function Restore-OrphanedVMs {
       hvrecover -VmConfigRoot "D:\Hyper-V","E:\Hyper-V"
     #>
 
-    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
         [string[]]$VmConfigRoot = @("$env:ProgramData\Microsoft\Windows\Hyper-V"),
@@ -628,7 +604,7 @@ function Remove-GpuPartitions {
       nogpup -NamePattern "lab-*"
     #>
 
-    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false, Position = 0)]
         [string]$NamePattern
@@ -647,11 +623,6 @@ function Remove-GpuPartitions {
 
     $params = @{
         NamePattern = $NamePattern
-    }
-
-    # Forward -WhatIf from common parameter
-    if ($PSBoundParameters.ContainsKey('WhatIf')) {
-        $params.WhatIf = $true
     }
 
     & $scriptPath @params

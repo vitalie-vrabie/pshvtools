@@ -172,15 +172,11 @@ hvrestore -BackupPath "D:\hvbak-archives\20260101\MyVM_20260101123456.7z" `
 Scans Hyper-V VM configuration folders (`Virtual Machines`) for VM configs present on disk but not registered, and re-registers them in-place.
 
 **Parameters:**
-- `WhatIf` - Preview changes without applying them
 - `VmConfigRoot` - Path to root folder for VM configs (default: `C:\ProgramData\Microsoft\Windows\Hyper-V\Virtual Machines`)
 - `LogFile` - Log file path (default: `$env:TEMP\RecoverOrphanedVMs.log`)
 
 **Examples:**
 ```powershell
-# Preview orphaned VM recovery actions
-hvrecover -WhatIf
-
 # Recover orphaned VMs found in default location
 hvrecover
 
@@ -192,14 +188,12 @@ hvrecover -VmConfigRoot "D:\Hyper-V\Custom VMs"
 Repairs file permissions on VHD/VHDX files for Hyper-V access.
 
 **Parameters:**
-- `WhatIf` - Preview changes without applying them
 - `VhdFolder` - Path to folder with VHD/VHDX files
 - `VhdListCsv` - CSV file with VHD paths
 - `LogFile` - Log file path (default: `$env:TEMP\FixVhdAcl.log`)
 
 **Examples:**
 ```powershell
-fix-vhd-acl -WhatIf
 fix-vhd-acl
 Repair-VhdAcl -VhdFolder "D:\Restores"
 ```
@@ -215,8 +209,6 @@ hvclone -SourceVmName "BaseWin11" -NewName "Win11-Dev01" -DestinationRoot "D:\Hy
 # Same, using dashed alias
 hv-clone -SourceVmName "BaseWin11" -NewName "Win11-Dev02" -DestinationRoot "D:\Hyper-V"
 
-# Preview actions
-hvclone -SourceVmName "BaseWin11" -NewName "Win11-WhatIf" -DestinationRoot "D:\Hyper-V" -WhatIf
 ```
 
 ---

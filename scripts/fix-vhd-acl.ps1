@@ -7,15 +7,14 @@
     - Default (no VhdFolder or VhdListCsv): enumerate Get-VM and fix attached VHDs.
     - -VhdFolder <path>: recursively process *.vhd, *.vhdx under the folder.
     - -VhdListCsv <path>: CSV with columns Path and optional VMId (GUID without braces).
-  Use -WhatIf to preview actions.
+  Always applies changes (no -WhatIf preview mode).
 
 .EXAMPLE
-  .\Fix-VhdAcl-NoBak.ps1 -WhatIf
   .\Fix-VhdAcl-NoBak.ps1 -VhdFolder "D:\Restores"
   .\Fix-VhdAcl-NoBak.ps1 -VhdListCsv "C:\temp\vhd-list.csv"
 #>
 
-[CmdletBinding(SupportsShouldProcess)]
+[CmdletBinding()]
 param(
   [string]$VhdFolder,
   [string]$VhdListCsv,
@@ -90,13 +89,6 @@ function Process-Vhd {
 
   if ($VmId) {
     $vmAccount = "NT VIRTUAL MACHINE\$VmId"
-    $whatIfMessage = "Take ownership and grant ${vmAccount}:(F), SYSTEM:(F), and Administrators:(F) to $Path"
-  } else {
-    $whatIfMessage = "Take ownership and grant SYSTEM:(F) and Administrators:(F) to $Path"
-  }
-
-  if (-not $PSCmdlet.ShouldProcess($Path, $whatIfMessage)) {
-    return
   }
 
   try {

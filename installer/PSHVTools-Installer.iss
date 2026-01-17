@@ -4,7 +4,7 @@
 
 #define MyAppName "PSHVTools"
 #ifndef MyAppVersion
-#define MyAppVersion "1.0.10-dev"
+#define MyAppVersion "1.0.10"
 #endif
 #ifndef MyAppLatestStableVersion
 #define MyAppLatestStableVersion "1.0.9"

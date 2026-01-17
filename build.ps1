@@ -11,7 +11,12 @@ if ([string]::IsNullOrWhiteSpace($IsccPath)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($IssFile)) {
-    $IssFile = Join-Path $PSScriptRoot 'PSHVTools-Installer.iss'
+    $candidate = Join-Path $PSScriptRoot 'installer\PSHVTools-Installer.iss'
+    if (Test-Path -LiteralPath $candidate) {
+        $IssFile = $candidate
+    } else {
+        $IssFile = Join-Path $PSScriptRoot 'PSHVTools-Installer.iss'
+    }
 }
 
 $isccExe = Join-Path $IsccPath 'ISCC.exe'

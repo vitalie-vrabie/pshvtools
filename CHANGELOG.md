@@ -12,6 +12,18 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Fixed
 
+## [1.0.8] - 2026-01-17
+
+### Added
+- Installer: dev-build installs now require explicit acknowledgement via a wizard checkbox page.
+
+### Fixed
+- Installer: fixed semantic version comparisons and startup checks so dev/stable detection behaves reliably.
+
+### Changed
+
+### Fixed
+
 ## [1.0.7] - 2026-01-16
 
 ### Added

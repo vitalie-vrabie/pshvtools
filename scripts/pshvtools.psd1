@@ -1,6 +1,4 @@
-﻿File: scripts\pshvtools.psd1
-````````
-#
+﻿#
 # Module manifest for module 'PSHVTools'
 #
 

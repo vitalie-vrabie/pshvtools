@@ -450,8 +450,8 @@ var
   ModulePath: String;
   ResultCode: Integer;
 begin
-  // Look for existing uninstaller and run it
-  UninstallExe := ExpandConstant('{app}\uninstall\unins000.exe');
+  // Note: {app} is NOT initialized in InitializeSetup, so we build the full path manually
+  UninstallExe := ExpandConstant('{autopf}\PSHVTools\uninstall\unins000.exe');
   if FileExists(UninstallExe) then
   begin
     // Run the old uninstaller silently
@@ -463,7 +463,7 @@ begin
   Exec('powershell.exe', '-NoProfile -Command "Stop-Process -Name powershell -Force -ErrorAction SilentlyContinue"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(1000);
 
-  // Clean up module directory (Inno will overwrite anyway with UsePreviousAppDir=no)
+  // Clean up module directory
   ModulePath := ExpandConstant('{commonpf64}\WindowsPowerShell\Modules\pshvtools');
   if DirExists(ModulePath) then
   begin

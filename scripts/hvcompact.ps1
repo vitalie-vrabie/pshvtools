@@ -4,29 +4,35 @@
 
 .DESCRIPTION
   For each VM matching the provided NamePattern this script:
+    - Automatically shuts down the VM (unless -NoAutoShutdown is specified).
     - Retrieves all VHD/VHDX disks attached to the VM.
     - Compacts each disk using Optimize-VHD with full reclamation mode.
+    - Automatically starts the VM back up after compaction.
     - Reports progress and status for each compaction operation.
-    - Requires the VM to be stopped before compacting.
 
 .PARAMETER NamePattern
   Wildcard pattern to match VM names (e.g., "*" for all VMs, "web-*" for VMs starting with "web-").
 
+.PARAMETER NoAutoShutdown
+  If specified, do not automatically shut down running VMs. VMs must be stopped manually.
+  Default is to automatically shut down any running VMs before compaction.
+
 .EXAMPLE
   .\hvcompact.ps1 -NamePattern "*"
-  Compacts all VHDs of all VMs.
+  Compacts all VHDs of all VMs (shuts down and restarts them automatically).
 
 .EXAMPLE
   .\hvcompact.ps1 -NamePattern "srv-*"
-  Compacts all VHDs of VMs matching "srv-*".
+  Compacts all VHDs of VMs matching "srv-*" (auto shutdown/startup).
 
 .EXAMPLE
-  .\hvcompact.ps1 "web-*"
-  Positional parameter - compacts all VHDs of VMs matching "web-*".
+  .\hvcompact.ps1 "web-*" -NoAutoShutdown
+  Compacts VHDs of VMs matching "web-*" (requires VMs to be already stopped).
 
 .NOTES
   - Run elevated (Administrator) on the Hyper-V host.
-  - VMs must be stopped before VHD compaction can proceed.
+  - By default, running VMs are automatically stopped before compaction and restarted after.
+  - Use -NoAutoShutdown to manage VM state manually.
   - Compaction can be time-consuming depending on VHD size.
   - Compaction releases unused space from the VHD to the host storage.
   - Supports Ctrl+C cancellation.
@@ -34,7 +40,10 @@
 
 param(
     [Parameter(Mandatory = $false, Position = 0)]
-    [string]$NamePattern
+    [string]$NamePattern,
+    
+    [Parameter(Mandatory = $false)]
+    [switch]$NoAutoShutdown = $false
 )
 
 # Allow passing VM name as first raw arg (e.g. from cmd files) even if caller forgets -NamePattern
@@ -67,11 +76,51 @@ try {
     Write-Host "Found $($vms.Count) VM(s) to process" -ForegroundColor Green
     Write-Host ""
 
+    # Track which VMs were running so we can restart them
+    $runningVms = @()
     $totalDisksCompacted = 0
     $totalErrors = 0
 
+    # Phase 1: Shutdown running VMs (if not -NoAutoShutdown)
+    if (-not $NoAutoShutdown) {
+        Write-Host "========================================" -ForegroundColor Cyan
+        Write-Host "Phase 1: Shutting down running VMs..." -ForegroundColor Cyan
+        Write-Host "========================================" -ForegroundColor Cyan
+        
+        foreach ($vm in $vms) {
+            if ($vm.State -eq "Running") {
+                Write-Host "Stopping: $($vm.Name)" -ForegroundColor Yellow
+                try {
+                    Stop-VM -VM $vm -Force -ErrorAction Stop
+                    $runningVms += $vm
+                    Write-Host "  Stopped successfully" -ForegroundColor Green
+                } catch {
+                    Write-Host "  ERROR: Failed to stop VM - $_" -ForegroundColor Red
+                    $totalErrors++
+                }
+            }
+        }
+        
+        # Wait for VMs to fully shutdown
+        if ($runningVms.Count -gt 0) {
+            Write-Host ""
+            Write-Host "Waiting for VMs to stop..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 3
+        }
+        Write-Host ""
+    }
+
+    # Phase 2: Compact VHDs
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "Phase 2: Compacting VHDs..." -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host ""
+
     foreach ($vm in $vms) {
         $vmName = $vm.Name
+        
+        # Refresh VM state
+        $vm = Get-VM -Name $vmName
         $vmState = $vm.State
 
         Write-Host "Processing VM: $vmName (State: $vmState)" -ForegroundColor Cyan
@@ -128,11 +177,31 @@ try {
         Write-Host ""
     }
 
+    # Phase 3: Restart VMs that were running (if not -NoAutoShutdown)
+    if (-not $NoAutoShutdown -and $runningVms.Count -gt 0) {
+        Write-Host "========================================" -ForegroundColor Cyan
+        Write-Host "Phase 3: Starting VMs..." -ForegroundColor Cyan
+        Write-Host "========================================" -ForegroundColor Cyan
+        
+        foreach ($vm in $runningVms) {
+            Write-Host "Starting: $($vm.Name)" -ForegroundColor Yellow
+            try {
+                Start-VM -VM $vm -ErrorAction Stop
+                Write-Host "  Started successfully" -ForegroundColor Green
+            } catch {
+                Write-Host "  ERROR: Failed to start VM - $_" -ForegroundColor Red
+                $totalErrors++
+            }
+        }
+        Write-Host ""
+    }
+
     # Summary
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host "Compaction Summary:" -ForegroundColor Cyan
     Write-Host "  VMs processed: $($vms.Count)" -ForegroundColor Green
     Write-Host "  Disks compacted: $totalDisksCompacted" -ForegroundColor Green
+    Write-Host "  VMs restarted: $($runningVms.Count)" -ForegroundColor Green
     Write-Host "  Errors: $totalErrors" -ForegroundColor $(if ($totalErrors -gt 0) { "Red" } else { "Green" })
     Write-Host "========================================" -ForegroundColor Cyan
 

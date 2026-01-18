@@ -512,7 +512,7 @@ begin
     else
     begin
       PowerShellVersionPage.RichEditViewer.Lines.Add('  [ERROR] .NET 10 or later runtime is required!');
-      PowerShellVersionPage.RichEditViewer.Lines.Add('  Please install .NET 10 runtime from https://dotnet.microsoft.com/download');
+      PowerShellVersionPage.RichEditViewer.Lines.Add('  Please install .NET 10 runtime from https://dotnet.microsoft.com/download/dotnet/10.0');
       RequirementsOK := False;
     end;
 

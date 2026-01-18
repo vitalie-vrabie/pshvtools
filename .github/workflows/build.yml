@@ -67,6 +67,16 @@ jobs:
       shell: pwsh
       run: |
         choco install innosetup -y
+      
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Publish GUI application
+      shell: pwsh
+      run: |
+        dotnet publish PSHVTools.GUI/PSHVToolsShell/PSHVToolsShell.csproj -c Release -r win-x64 -f net10.0-windows --self-contained false
         
     - name: Build Installer
       shell: pwsh

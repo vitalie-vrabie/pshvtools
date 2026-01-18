@@ -111,25 +111,109 @@ Root: HKLM; Subkey: "Software\{#MyAppPublisher}\{#MyAppName}"; ValueType: string
 Root: HKLM; Subkey: "Software\{#MyAppPublisher}\{#MyAppName}"; ValueType: string; ValueName: "ModulePath"; ValueData: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"; Flags: uninsdeletekey
 
 [Code]
+var
+  PowerShellVersionPage: TOutputMsgMemoWizardPage;
+  DevBuildConsentPage: TWizardPage;
+  DevBuildConsentCheck: TNewCheckBox;
+  RequirementsOK: Boolean;
+  NeedsDevBuildConsent: Boolean;
+
+function NormalizeVersionForCompare(const S: String): String;
+var
+  T: String;
+begin
+  T := Trim(S);
+  if (Length(T) > 0) and ((T[1] = 'v') or (T[1] = 'V')) then
+    Delete(T, 1, 1);
+  Result := T;
+end;
+
+procedure RequireDevBuildConsent(const CurrentVersion, ReferenceVersion, ReferenceLabel: String);
+begin
+  NeedsDevBuildConsent := True;
+  if DevBuildConsentPage <> nil then
+  begin
+    DevBuildConsentPage.Caption := 'Development build warning';
+    DevBuildConsentPage.Description :=
+      'This installer appears to be a development build.' + #13#10 +
+      'Installer version: ' + CurrentVersion + #13#10 +
+      ReferenceLabel + ': ' + ReferenceVersion + #13#10 + #13#10 +
+      'This build may be unstable. You must acknowledge before continuing.';
+    DevBuildConsentCheck.Checked := False;
+  end;
+end;
+
+function CompareSemVer(const A, B: String): Integer;
+begin
+  // Simple comparison - just handle the major version numbers
+  if A = B then Result := 0
+  else if A > B then Result := 1
+  else Result := -1;
+end;
+
+procedure WarnIfOutdatedInstaller();
+begin
+  if CompareSemVer('{#MyAppVersion}', '{#MyAppLatestStableVersion}') > 0 then
+    RequireDevBuildConsent(NormalizeVersionForCompare('{#MyAppVersion}'), NormalizeVersionForCompare('{#MyAppLatestStableVersion}'), 'Latest stable release');
+end;
+
 function InitializeSetup(): Boolean;
 var
   ResultCode: Integer;
+  AppPath: String;
+  ModulePath: String;
 begin
-  // Kill PowerShell processes to release any module locks
   Exec('taskkill.exe', '/F /IM powershell.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Sleep(500);
-
-  // Clean up old app directory BEFORE installation
-  Exec('powershell.exe',
-    '-NoProfile -Command "Remove-Item -Path ''' + ExpandConstant('{autopf}\PSHVTools') + ''' -Recurse -Force -ErrorAction SilentlyContinue; exit 0"',
-    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Sleep(500);
-
-  // Clean up old module directory BEFORE installation
-  Exec('powershell.exe',
-    '-NoProfile -Command "Remove-Item -Path ''' + ExpandConstant('{commonpf64}\WindowsPowerShell\Modules\pshvtools') + ''' -Recurse -Force -ErrorAction SilentlyContinue; exit 0"',
-    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Sleep(500);
-
+  Sleep(1000);
+  AppPath := ExpandConstant('{autopf}\PSHVTools');
+  if DirExists(AppPath) then
+  begin
+    RemoveDir(AppPath);
+    Sleep(500);
+  end;
+  ModulePath := ExpandConstant('{commonpf64}\WindowsPowerShell\Modules\pshvtools');
+  if DirExists(ModulePath) then
+  begin
+    RemoveDir(ModulePath);
+    Sleep(500);
+  end;
   Result := True;
+end;
+
+procedure InitializeWizard();
+begin
+  RequirementsOK := True;
+  NeedsDevBuildConsent := False;
+  WarnIfOutdatedInstaller();
+  if NeedsDevBuildConsent then
+  begin
+    DevBuildConsentPage := CreateCustomPage(wpWelcome, 'Development build warning', '');
+    DevBuildConsentCheck := TNewCheckBox.Create(DevBuildConsentPage);
+    DevBuildConsentCheck.Parent := DevBuildConsentPage.Surface;
+    DevBuildConsentCheck.Left := ScaleX(0);
+    DevBuildConsentCheck.Top := ScaleY(8);
+    DevBuildConsentCheck.Width := DevBuildConsentPage.SurfaceWidth;
+    DevBuildConsentCheck.Caption := 'I understand and want to continue.';
+  end;
+  PowerShellVersionPage := CreateOutputMsgMemoPage(wpWelcome, 'Checking System Requirements', 'Please wait while Setup checks if your system meets the requirements.', 'Setup is checking for PowerShell 5.1+ and Hyper-V...', '');
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := False;
+  if (DevBuildConsentPage <> nil) and (PageID = DevBuildConsentPage.ID) then
+    Result := not NeedsDevBuildConsent;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+  if (DevBuildConsentPage <> nil) and (CurPageID = DevBuildConsentPage.ID) then
+  begin
+    if not DevBuildConsentCheck.Checked then
+    begin
+      MsgBox('You must check "I understand and want to continue." to proceed.', mbError, MB_OK);
+      Result := False;
+    end;
+  end;
 end;

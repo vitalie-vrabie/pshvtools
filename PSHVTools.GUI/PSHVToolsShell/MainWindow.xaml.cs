@@ -19,6 +19,7 @@ public partial class MainWindow : Window
 {
     public MainWindow()
     {
+        MessageBox.Show("PSHVTools GUI is starting...", "Debug");
         try
         {
             InitializeComponent();

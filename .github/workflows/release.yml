@@ -45,6 +45,16 @@ jobs:
         $content = $content -replace "`r`n", "%0A"
         Write-Host "notes=$content" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
         
+    - name: Check if Stable Release
+      id: check_stable
+      shell: pwsh
+      run: |
+        $versionJson = Get-Content version.json | ConvertFrom-Json
+        $stableVersion = $versionJson.stableVersion
+        $tag = $env:GITHUB_REF_NAME -replace '^v', ''
+        $isStable = $tag -eq $stableVersion
+        Write-Host "is_stable=$isStable" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
@@ -53,6 +63,6 @@ jobs:
           dist/PSHVTools-Setup.exe.sha256
         body_path: RELEASE_NOTES.md
         draft: false
-        prerelease: false
+        prerelease: ${{ steps.check_stable.outputs.is_stable == 'False' }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

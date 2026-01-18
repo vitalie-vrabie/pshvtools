@@ -87,8 +87,6 @@ Source: "..\scripts\pshvtools.psd1"; DestDir: "{commonpf64}\WindowsPowerShell\Mo
 Source: "..\scripts\fix-vhd-acl.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
 Source: "..\scripts\restore-vmbackup.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
 Source: "..\scripts\restore-orphaned-vms.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
-Source: "..\scripts\remove-gpu-partitions.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
-Source: "..\scripts\PSHVTools-GUI.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
 
 ; GUI Application
 Source: "..\PSHVTools.GUI\PSHVToolsShell\bin\Release\net10.0-windows\win-x64\publish\PSHVToolsShell.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -109,7 +107,7 @@ Name: "{group}\Changelog"; Filename: "{app}\CHANGELOG.md"
 Name: "{group}\Quick Start Guide"; Filename: "{app}\QUICKSTART.md"
 Name: "{group}\Contributing Guide"; Filename: "{app}\CONTRIBUTING.md"
 Name: "{group}\Troubleshooting"; Filename: "{app}\TROUBLESHOOTING.md"
-Name: "{group}\PSHVTools GUI"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-ExecutionPolicy Bypass -Command ""Start-Process -FilePath '{app}\PSHVToolsShell.exe' -Verb RunAs"""; WorkingDir: "{app}"; IconFilename: "{app}\PSHVToolsShell.exe"; Comment: "Launch PSHVTools GUI"
+Name: "{group}\PSHVTools GUI"; Filename: "{app}\PSHVToolsShell.exe"; WorkingDir: "{app}"; IconFilename: "{app}\PSHVToolsShell.exe"; Comment: "Launch PSHVTools GUI"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 
 [Registry]

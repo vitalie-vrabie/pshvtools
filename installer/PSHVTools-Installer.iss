@@ -111,5 +111,5 @@ Root: HKLM; Subkey: "Software\{#MyAppPublisher}\{#MyAppName}"; ValueType: string
 Root: HKLM; Subkey: "Software\{#MyAppPublisher}\{#MyAppName}"; ValueType: string; ValueName: "ModulePath"; ValueData: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"; Flags: uninsdeletekey
 
 [Run]
-; Clean up old module directory to ensure fresh install
-Filename: "powershell.exe"; Parameters: "-NoProfile -Command ""Remove-Item -Path '{commonpf64}\WindowsPowerShell\Modules\pshvtools' -Recurse -Force -ErrorAction SilentlyContinue; exit 0"""; Flags: RunHidden; StatusMsg: "Cleaning up old module files..."
+; Clean up old app directory to ensure fresh install
+Filename: "powershell.exe"; Parameters: "-NoProfile -Command ""Remove-Item -Path '{autopf}\PSHVTools' -Recurse -Force -ErrorAction SilentlyContinue; exit 0"""; Flags: RunHidden; StatusMsg: "Cleaning up old installation..."

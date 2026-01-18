@@ -446,30 +446,27 @@ end;
 
 function InitializeSetup(): Boolean;
 var
-  UninstallExe: String;
-  ModulePath: String;
   ResultCode: Integer;
 begin
-  // Note: {app} is NOT initialized in InitializeSetup, so we build the full path manually
-  UninstallExe := ExpandConstant('{autopf}\PSHVTools\uninstall\unins000.exe');
-  if FileExists(UninstallExe) then
-  begin
-    // Run the old uninstaller silently
-    Exec(UninstallExe, '/SILENT /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-    Sleep(2000);
-  end;
+  // Force-clean using PowerShell which is more reliable than Inno's RemoveDir
+  // Kill all PowerShell processes first
+  Exec('taskkill.exe', '/F /IM powershell.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(500);
 
-  // Force-kill any PowerShell sessions to release module locks
-  Exec('powershell.exe', '-NoProfile -Command "Stop-Process -Name powershell -Force -ErrorAction SilentlyContinue"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Use PowerShell to force-delete directories
+  Exec('powershell.exe', 
+    '-NoProfile -Command "' +
+    '$pshvModPath = [System.IO.Path]::Combine($env:ProgramFiles, ''WindowsPowerShell'', ''Modules'', ''pshvtools''); ' +
+    '$pshvAppPath = [System.IO.Path]::Combine($env:ProgramFiles, ''PSHVTools''); ' +
+    'foreach($path in @($pshvModPath, $pshvAppPath)) { ' +
+    '  if (Test-Path $path) { ' +
+    '    Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue; ' +
+    '  } ' +
+    '} ' +
+    'exit 0"', 
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
   Sleep(1000);
-
-  // Clean up module directory
-  ModulePath := ExpandConstant('{commonpf64}\WindowsPowerShell\Modules\pshvtools');
-  if DirExists(ModulePath) then
-  begin
-    RemoveDir(ModulePath);
-  end;
-
   Result := True;
 end;
 

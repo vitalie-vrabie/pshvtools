@@ -275,20 +275,19 @@ var
   AppPath: String;
   ModulePath: String;
 begin
-  // Remove app directory recursively (including all files)
-  // Note: Windows allows deleting files even if they're in use
+  // Remove files from app directory (but keep directory)
   AppPath := ExpandConstant('{autopf}\PSHVTools');
   if DirExists(AppPath) then
   begin
-    Exec('cmd.exe', '/c rmdir /s /q "' + AppPath + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('cmd.exe', '/c del /q "' + AppPath + '\*.*"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Sleep(500);
   end;
 
-  // Remove module directory recursively (including all files)
+  // Remove files from module directory (but keep directory so installer can copy to it)
   ModulePath := ExpandConstant('{commonpf64}\WindowsPowerShell\Modules\pshvtools');
   if DirExists(ModulePath) then
   begin
-    Exec('cmd.exe', '/c rmdir /s /q "' + ModulePath + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('cmd.exe', '/c del /q "' + ModulePath + '\*.*"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Sleep(500);
   end;
 

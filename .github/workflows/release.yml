@@ -24,6 +24,18 @@ jobs:
       shell: pwsh
       run: |
         choco install innosetup -y
+    - name: Ensure dist/ is not committed
+      shell: pwsh
+      run: |
+        Write-Host "Note: dist/ contains build artifacts and must NOT be committed to the repository. Release workflow will upload artifacts separately."
+        $tracked = git ls-files 'dist/*' 2>$null | Out-String
+        if ($tracked.Trim()) {
+          Write-Host "ERROR: Found tracked files under dist/:" -ForegroundColor Red
+          git ls-files 'dist/*' | ForEach-Object { Write-Host "  $_" }
+          throw 'Tracked files in dist/ detected. Remove them from the repository and do not commit build artifacts.'
+        } else {
+          Write-Host "No tracked files under dist/ — OK." -ForegroundColor Green
+        }
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v3
       with:

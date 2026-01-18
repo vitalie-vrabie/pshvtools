@@ -49,6 +49,7 @@ WizardSizePercent=100,100
 DisableWelcomePage=no
 LicenseFile=..\LICENSE.txt
 InfoBeforeFile=..\QUICKSTART.md
+InfoBeforeFile=..\docs\QUICKSTART.md
 
 ; Privileges and compatibility
 PrivilegesRequired=admin
@@ -92,13 +93,13 @@ Source: "..\scripts\restore-orphaned-vms.ps1"; DestDir: "{commonpf64}\WindowsPow
 Source: "..\PSHVTools.GUI\PSHVToolsShell\bin\Release\net10.0-windows\win-x64\publish\PSHVToolsShell.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Documentation files - install to application directory
-Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
-Source: "..\RELEASE_NOTES.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\QUICKSTART.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\docs\README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
+Source: "..\docs\RELEASE_NOTES.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\docs\QUICKSTART.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\docs\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\CONTRIBUTING.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\TROUBLESHOOTING.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\docs\CONTRIBUTING.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\docs\TROUBLESHOOTING.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; Start Menu shortcuts

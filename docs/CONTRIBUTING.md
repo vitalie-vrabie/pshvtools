@@ -203,6 +203,19 @@ Add any other context about the problem.
 ./build.ps1 -WhatIf
 ```
 
+### Build artifacts
+
+- Do NOT commit build artifacts (for example the `dist/` directory) into the repository. The `dist/` directory is listed in `.gitignore` and CI uploads build artifacts separately.
+- If you accidentally committed files under `dist/`, remove them from the repository history or untrack them with:
+
+```bash
+# remove tracked files but keep them locally
+git rm --cached -r dist
+git commit -m "chore: remove dist artifacts from repo"
+```
+
+CI and release workflows will build the GUI, create the installer, and attach the resulting files as workflow artifacts or Release assets. This keeps the repository small and avoids tracking generated binaries.
+
 ### Version Management
 
 Version is managed in `version.json`:

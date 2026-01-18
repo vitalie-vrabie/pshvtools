@@ -93,6 +93,7 @@ PSHVTools-Setup-1.0.5.exe /VERYSILENT /NORESTART
 - Start Menu -> PSHVTools -> Uninstall
 
 ### Silent Uninstall
+
 ```cmd
 "C:\Program Files\PSHVTools\unins000.exe" /VERYSILENT /NORESTART
 ```

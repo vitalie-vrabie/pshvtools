@@ -45,7 +45,7 @@ PSHVTools is a comprehensive PowerShell module for backing up and managing Hyper
 4. The module will be available system-wide
 
 **Silent Installation:**
-```cmd
+```powershell
 PSHVTools-Setup.exe /VERYSILENT /NORESTART
 ```
 
@@ -143,10 +143,10 @@ Get-PSHVToolsConfig
 
 ## Documentation
 
-- **[Quick Start Guide](QUICKSTART.md)** - Step-by-step usage examples
-- **[Troubleshooting](TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Contributing](CONTRIBUTING.md)** - Development guidelines
-- **[Changelog](CHANGELOG.md)** - Version history and changes
+- **Quick Start Guide**: `QUICKSTART.md`
+- **Troubleshooting**: `TROUBLESHOOTING.md`
+- **Contributing**: `CONTRIBUTING.md`
+- **Changelog**: `CHANGELOG.md`
 
 ---
 

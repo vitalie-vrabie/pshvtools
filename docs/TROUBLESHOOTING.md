@@ -4,7 +4,7 @@ Common issues and their solutions.
 
 ---
 
-## ?? Installation Issues
+## Installation Issues
 
 ### Issue: "Execution policy does not allow script execution"
 
@@ -43,7 +43,7 @@ notepad install.log
 
 ---
 
-## ?? Backup Issues
+## Backup Issues
 
 ### Issue: "No VMs match the pattern"
 
@@ -175,7 +175,7 @@ Write-Host "Running as Admin: $isAdmin"
 
 ---
 
-## ?? Restore Issues
+## Restore Issues
 
 ### Issue: "Backup archive not found"
 
@@ -243,7 +243,7 @@ Write-Host "Running as Admin: $isAdmin"
 
 ---
 
-## ?? Permission Issues
+## Permission Issues
 
 ### Issue: "Access denied" errors on VHD files
 
@@ -276,7 +276,7 @@ icacls $vhd /grant "NT VIRTUAL MACHINE\Virtual Machines:(F)"
 
 ---
 
-## ?? Diagnostic Commands
+## Diagnostic Commands
 
 ### Environment Health Check
 
@@ -320,21 +320,6 @@ Get-VM | Format-Table Name, State, Status, Uptime -AutoSize
 Get-VM | Get-VMSnapshot | Format-Table VMName, Name, CreationTime
 ```
 
-### Check Disk Space
-
-```powershell
-# All drives
-Get-PSDrive | Where-Object { $_.Used -ne $null } | 
-    Select-Object Name, 
-                  @{N='Used(GB)';E={[math]::Round($_.Used/1GB,2)}},
-                  @{N='Free(GB)';E={[math]::Round($_.Free/1GB,2)}}
-
-# Backup location
-$backupPath = "$HOME\hvbak-archives"
-$size = (Get-ChildItem $backupPath -Recurse | Measure-Object -Property Length -Sum).Sum
-Write-Host "Backups using: $([math]::Round($size/1GB,2)) GB"
-```
-
 ### Clean Up Resources
 
 ```powershell
@@ -353,7 +338,7 @@ Get-Process 7z -ErrorAction SilentlyContinue | Stop-Process -Force
 
 ---
 
-## ?? Reporting Issues
+## Reporting Issues
 
 If you encounter an issue not covered here:
 
@@ -375,10 +360,10 @@ If you encounter an issue not covered here:
 
 ---
 
-## ?? Additional Resources
+## Additional Resources
 
-- **README:** [README.md](README.md)
-- **Quick Start:** [QUICKSTART.md](QUICKSTART.md)
-- **Build Guide:** [BUILD_GUIDE.md](BUILD_GUIDE.md)
-- **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
+- **README:** `README.md`
+- **Quick Start:** `QUICKSTART.md`
+- **Build Guide:** `BUILD_GUIDE.md`
+- **Contributing:** `CONTRIBUTING.md`
 - **GitHub Issues:** https://github.com/vitalie-vrabie/pshvtools/issues

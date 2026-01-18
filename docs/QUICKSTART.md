@@ -9,7 +9,7 @@
 4. The module will be available system-wide
 
 **Silent Installation:**
-```cmd
+```powershell
 PSHVTools-Setup.exe /VERYSILENT /NORESTART
 ```
 
@@ -45,6 +45,7 @@ Import-Module pshvtools
 ```powershell
 hvhealth
 ```
+
 This verifies PowerShell, Hyper-V, and 7-Zip are properly configured.
 
 ### 3. Configure Defaults (Optional)
@@ -180,3 +181,5 @@ hvbak -NamePattern "TestVM" -WhatIf
 
 # Check VM status
 Get-VM | Where-Object {$_.Name -like "*"} | Select-Object Name, State, Status
+```
+

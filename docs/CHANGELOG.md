@@ -154,3 +154,4 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ### Changed
 - Backup script archive progress output now identifies the archive file.
 - Backup retention scan now accounts for just-created archives even if directory enumeration lags.
+

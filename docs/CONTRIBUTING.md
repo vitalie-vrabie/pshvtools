@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to PSHVTools! This document provides guidelines and instructions for contributing.
 
-## ?? Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -40,7 +40,7 @@ Thank you for your interest in contributing to PSHVTools! This document provides
    Import-Module ./scripts/pshvtools.psd1 -Force
    ```
 
-## ?? Coding Standards
+## Coding Standards
 
 ### PowerShell Style Guide
 
@@ -64,50 +64,7 @@ Thank you for your interest in contributing to PSHVTools! This document provides
    - Provide meaningful error messages
    - Clean up resources in `finally` blocks
 
-### Example Function Structure
-
-```powershell
-function Verb-Noun {
-    <#
-    .SYNOPSIS
-        Brief description of function.
-        
-    .DESCRIPTION
-        Detailed description of what the function does.
-        
-    .PARAMETER ParameterName
-        Description of the parameter.
-        
-    .EXAMPLE
-        Verb-Noun -ParameterName "value"
-        Description of what this example does.
-    #>
-    [CmdletBinding(SupportsShouldProcess)]
-    [Alias('alias-name')]
-    param(
-        [Parameter(Mandatory)]
-        [ValidateNotNullOrEmpty()]
-        [string]$ParameterName
-    )
-    
-    begin {
-        # Initialization code
-    }
-    
-    process {
-        # Main logic
-        if ($PSCmdlet.ShouldProcess($target, $action)) {
-            # Perform action
-        }
-    }
-    
-    end {
-        # Cleanup code
-    }
-}
-```
-
-## ?? Testing
+## Testing
 
 ### Running Tests
 
@@ -130,18 +87,7 @@ Invoke-Pester -Path ./tests -CodeCoverage ./scripts/*.ps1
 - Group related tests using `Describe` and `Context`
 - Use meaningful test descriptions
 
-Example:
-```powershell
-Describe 'Invoke-VMBackup' {
-    Context 'Parameter Validation' {
-        It 'Should accept NamePattern parameter' {
-            # Test code
-        }
-    }
-}
-```
-
-## ?? Git Workflow
+## Git Workflow
 
 ### Branching Strategy
 
@@ -171,13 +117,6 @@ footer (optional)
 - `refactor`: Code refactoring
 - `test`: Adding tests
 - `chore`: Build/tool changes
-
-**Examples:**
-```
-feat(backup): add differential backup support
-fix(restore): handle missing network switches gracefully
-docs(readme): update installation instructions
-```
 
 ### Pull Request Process
 
@@ -213,7 +152,7 @@ docs(readme): update installation instructions
    - Reference related issues
    - Ensure CI checks pass
 
-## ?? Reporting Bugs
+## Reporting Bugs
 
 ### Before Reporting
 
@@ -246,16 +185,7 @@ What you expected to happen.
 Add any other context about the problem.
 ```
 
-## ?? Feature Requests
-
-We welcome feature requests! Please:
-
-1. Check existing feature requests
-2. Describe the use case
-3. Explain expected behavior
-4. Consider implementation impact
-
-## ?? Building and Releasing
+## Building and Releasing
 
 ### Building Locally
 
@@ -289,6 +219,7 @@ Update version in `version.json`, then update:
 - `scripts/pshvtools.psd1`
 - `installer/PSHVTools-Installer.iss`
 - `CHANGELOG.md`
+- `RELEASE_NOTES.md`
 
 ### Release Process
 
@@ -302,15 +233,15 @@ Update version in `version.json`, then update:
 8. Push: `git push && git push --tags`
 9. GitHub Actions will create release automatically
 
-## ?? Getting Help
+## Getting Help
 
 - GitHub Issues: https://github.com/vitalie-vrabie/pshvtools/issues
 - Discussions: https://github.com/vitalie-vrabie/pshvtools/discussions
 
-## ?? Code of Conduct
+## Code of Conduct
 
 Be respectful, constructive, and professional in all interactions.
 
-## ?? License
+## License
 
 By contributing, you agree that your contributions will be licensed under the MIT License.

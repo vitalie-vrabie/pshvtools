@@ -48,7 +48,6 @@ WizardStyle=modern
 WizardSizePercent=100,100
 DisableWelcomePage=no
 LicenseFile=..\LICENSE.txt
-InfoBeforeFile=..\QUICKSTART.md
 InfoBeforeFile=..\docs\QUICKSTART.md
 
 ; Privileges and compatibility
@@ -90,7 +89,9 @@ Source: "..\scripts\restore-vmbackup.ps1"; DestDir: "{commonpf64}\WindowsPowerSh
 Source: "..\scripts\restore-orphaned-vms.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
 
 ; GUI Application
-Source: "..\PSHVTools.GUI\PSHVToolsShell\bin\Release\net10.0-windows\win-x64\publish\PSHVToolsShell.exe"; DestDir: "{app}"; Flags: ignoreversion
+; NOTE: The GUI publish artifact may not be present in CI/build environments.
+; Uncomment the following Source line when the GUI executable is available at the expected path.
+; Source: "..\PSHVTools.GUI\PSHVToolsShell\bin\Release\net10.0-windows\win-x64\publish\PSHVToolsShell.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Documentation files - install to application directory
 Source: "..\docs\README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme

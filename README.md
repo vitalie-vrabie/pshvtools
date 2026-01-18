@@ -95,6 +95,50 @@ hvcompact -NamePattern "*"          # Execute
 Show-PSHVToolsConfig
 ```
 
+## Sample Commands
+
+### Backup Operations
+```powershell
+# Backup all VMs with defaults
+hvbak
+
+# Backup specific VMs
+hvbak -NamePattern "Web*", "DB*"
+
+# Custom backup location and settings
+hvbak -NamePattern "*" -DestinationPath "E:\VMBackups" -Keep 10 -CompressionLevel 7
+```
+
+### Maintenance Tasks
+```powershell
+# Compact all VHD files
+hvcompact -NamePattern "*"
+
+# Fix permissions on VHD files
+hvfixacl -Path "D:\VMs\*.vhdx"
+
+# Clone a VM
+hvclone -SourceVM "Template" -NewVMName "NewVM"
+```
+
+### Recovery Operations
+```powershell
+# Restore from backup
+hvrestore -BackupPath "D:\Backups\VM.7z"
+
+# Recover orphaned VMs
+hvrecover
+```
+
+### Configuration
+```powershell
+# Set backup defaults
+Set-PSHVToolsConfig -DefaultBackupPath "F:\Backups" -DefaultKeepCount 7
+
+# View current settings
+Get-PSHVToolsConfig
+```
+
 ---
 
 ## Documentation

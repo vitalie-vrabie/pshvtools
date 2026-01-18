@@ -89,7 +89,7 @@ hvrestore -BackupPath "D:\Backups\WebServer.7z" -DestinationPath "D:\VMs"
 hvrecover
 ```
 
-## Advanced Usage
+## Advanced Usage Examples
 
 ### Parallel Backups
 ```powershell
@@ -106,6 +106,24 @@ hvbak -NamePattern "*" -CompressionLevel 9
 hvbak -NamePattern "*" -CompressionLevel 1
 ```
 
+### VM Cloning
+```powershell
+# Clone a VM with a new name
+hvclone -SourceVM "TemplateVM" -NewVMName "NewVM" -Path "D:\VMs"
+```
+
+### Configuration Management
+```powershell
+# Set comprehensive defaults
+Set-PSHVToolsConfig -DefaultBackupPath "E:\Backups" -DefaultKeepCount 5 -DefaultCompressionLevel 5 -MaxParallelBackups 3
+
+# Reset to defaults
+Reset-PSHVToolsConfig
+
+# View all settings
+Show-PSHVToolsConfig
+```
+
 ### Scheduled Backups
 Create a scheduled task to run backups automatically:
 
@@ -116,16 +134,49 @@ $trigger = New-ScheduledTaskTrigger -Daily -At 2am
 Register-ScheduledTask -TaskName "VMBackup" -Action $action -Trigger $trigger -RunLevel Highest
 ```
 
-## Troubleshooting
+### Batch Operations
+```powershell
+# Backup multiple VM patterns
+hvbak -NamePattern "Prod*", "Test*"
 
-If you encounter issues:
-1. Run `hvhealth` to check your environment
-2. Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common solutions
-3. Review the logs in `%TEMP%\PSHVTools\`
-4. Open an issue on [GitHub](https://github.com/vitalie-vrabie/pshvtools/issues)
+# Compact specific VHDs
+hvcompact -Path "D:\VMs\*.vhdx" -WhatIf
 
-## Next Steps
+# Fix ACLs on multiple paths
+hvfixacl -Path "D:\VMs\*.vhd*", "E:\VMs\*.vhd*"
+```
 
-- Read the full [README.md](README.md) for detailed documentation
-- Check [CHANGELOG.md](CHANGELOG.md) for version history
-- See [CONTRIBUTING.md](CONTRIBUTING.md) if you'd like to contribute
+### Monitoring and Logging
+```powershell
+# View backup progress (in another PowerShell window)
+Get-Job | Where-Object {$_.Name -like "*VMBackup*"} | Format-Table
+
+# Check logs
+Get-Content "$env:TEMP\PSHVTools\*.log" -Tail 20
+```
+
+## Troubleshooting Examples
+
+### Common Issues
+```powershell
+# If backups fail due to permissions
+hvfixacl -Path "D:\VMs\*.vhdx"
+
+# If Hyper-V module not found
+Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-Management-PowerShell
+
+# If 7-Zip not detected
+choco install 7zip  # Install via Chocolatey
+# Or add to PATH: $env:Path += ";C:\Program Files\7-Zip"
+```
+
+### Diagnostic Commands
+```powershell
+# Full environment check
+hvhealth -Verbose
+
+# Test backup with dry run
+hvbak -NamePattern "TestVM" -WhatIf
+
+# Check VM status
+Get-VM | Where-Object {$_.Name -like "*"} | Select-Object Name, State, Status

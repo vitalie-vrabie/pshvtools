@@ -69,7 +69,7 @@ WelcomeLabel1=Welcome to [name] Setup
 WelcomeLabel2=This will install [name/ver] on your computer.%n%nPSHVTools provides PowerShell cmdlets for backing up Hyper-V virtual machines with checkpoint support and 7-Zip compression.%n%nIt is recommended that you close all other applications before continuing.
 FinishedHeadingLabel=Completing [name] Setup
 FinishedLabelNoIcons=[name] has been successfully installed.%n%nThe pshvtools PowerShell module is now available system-wide.
-FinishedLabel=[name] has been successfully installed.%n%nThe pshvtools PowerShell module is now available system-wide.%n%nYou can now use the following commands:%n  Import-Module pshvtools%n  Get-Help Invoke-VMBackup -Full
+FinishedLabel=[name] has been successfully installed.%n%nThe pshvtools PowerShell module is now available system-wide.%n%nYou can now use the following commands:%n  Import-Module pshvtools%n  Get-Help Invoke-VMBackup -Full%n%nA GUI application is also available from the Start Menu.
 
 [CustomMessages]
 english.PowerShellCheck=Checking PowerShell version...
@@ -87,6 +87,7 @@ Source: "..\scripts\fix-vhd-acl.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\M
 Source: "..\scripts\restore-vmbackup.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
 Source: "..\scripts\restore-orphaned-vms.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
 Source: "..\scripts\remove-gpu-partitions.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
+Source: "..\scripts\PSHVTools-GUI.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
 
 ; Documentation files - install to application directory
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
@@ -104,6 +105,7 @@ Name: "{group}\Changelog"; Filename: "{app}\CHANGELOG.md"
 Name: "{group}\Quick Start Guide"; Filename: "{app}\QUICKSTART.md"
 Name: "{group}\Contributing Guide"; Filename: "{app}\CONTRIBUTING.md"
 Name: "{group}\Troubleshooting"; Filename: "{app}\TROUBLESHOOTING.md"
+Name: "{group}\PSHVTools GUI"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{commonpf64}\WindowsPowerShell\Modules\pshvtools\PSHVTools-GUI.ps1"""; WorkingDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"; IconFilename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Comment: "Launch PSHVTools GUI"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 
 [Registry]

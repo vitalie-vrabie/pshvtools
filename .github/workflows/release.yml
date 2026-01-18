@@ -31,6 +31,11 @@ jobs:
         cd PSHVTools.GUI/PSHVToolsShell
         dotnet publish --configuration Release --self-contained --runtime win-x64
         
+    - name: Copy GUI Executable to Dist
+      shell: pwsh
+      run: |
+        Copy-Item "PSHVTools.GUI/PSHVToolsShell/bin/Release/net10.0-windows/win-x64/publish/PSHVToolsShell.exe" "dist/"
+        
     - name: Update Documentation and Samples
       shell: pwsh
       run: |
@@ -78,6 +83,7 @@ jobs:
         files: |
           dist/PSHVTools-Setup.exe
           dist/PSHVTools-Setup.exe.sha256
+          dist/PSHVToolsShell.exe
         body_path: RELEASE_NOTES.md
         draft: false
         prerelease: ${{ steps.check_stable.outputs.is_stable == 'False' }}

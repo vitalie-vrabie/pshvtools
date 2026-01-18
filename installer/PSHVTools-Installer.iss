@@ -115,6 +115,7 @@ var
   PowerShellVersionPage: TOutputMsgMemoWizardPage;
   DevBuildConsentPage: TWizardPage;
   DevBuildConsentCheck: TNewCheckBox;
+  DownloadStableButton: TButton;
   RequirementsOK: Boolean;
   NeedsDevBuildConsent: Boolean;
 
@@ -224,6 +225,13 @@ begin
     RequireDevBuildConsent(NormalizeVersionForCompare('{#MyAppVersion}'), NormalizeVersionForCompare('{#MyAppLatestStableVersion}'), 'Latest stable release');
 end;
 
+procedure DownloadStableButtonClick(Sender: TObject);
+var
+  ResultCode: Integer;
+begin
+  Exec('cmd.exe', '/c start https://github.com/vitalie-vrabie/pshvtools/releases/latest', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
 function CheckPowerShellVersion(): Boolean;
 var
   ResultCode: Integer;
@@ -323,6 +331,16 @@ begin
   DevBuildConsentCheck.Top := ScaleY(8);
   DevBuildConsentCheck.Width := DevBuildConsentPage.SurfaceWidth;
   DevBuildConsentCheck.Caption := 'I understand and want to continue.';
+
+  // Add download stable release button
+  DownloadStableButton := TButton.Create(DevBuildConsentPage);
+  DownloadStableButton.Parent := DevBuildConsentPage.Surface;
+  DownloadStableButton.Left := ScaleX(0);
+  DownloadStableButton.Top := ScaleY(40);
+  DownloadStableButton.Width := ScaleX(200);
+  DownloadStableButton.Height := ScaleY(23);
+  DownloadStableButton.Caption := 'Download Latest Stable Release';
+  DownloadStableButton.OnClick := @DownloadStableButtonClick;
 
   // NOW check for dev build warning (page exists)
   WarnIfOutdatedInstaller();

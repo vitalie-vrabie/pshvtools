@@ -409,37 +409,6 @@ begin
   RequirementsOK := True;
   NeedsDevBuildConsent := False;
 
-  // Check if PSHVTools is already installed and uninstall old version
-  if RegQueryStringValue(HKLM, 'Software\{#MyAppPublisher}\{#MyAppName}', 'UninstallString', UninstallString) then
-  begin
-    // Uninstall the old version first
-    if FileExists(UninstallString) then
-    begin
-      // Run the uninstaller silently
-      Exec(UninstallString, '/SILENT /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-      
-      // Wait for uninstaller to complete
-      Sleep(2000);
-    end;
-  end;
-
-  // Always try to clean up the module directory to ensure fresh install
-  ModulePath := ExpandConstant('{commonpf64}\WindowsPowerShell\Modules\pshvtools');
-  if DirExists(ModulePath) then
-  begin
-    // Remove module from memory first
-    Exec('powershell.exe',
-      '-NoProfile -NonInteractive -Command "Remove-Module pshvtools -ErrorAction SilentlyContinue"',
-      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-    Sleep(500);
-    
-    // Try to delete the directory
-    if not RemoveDir(ModulePath) then
-    begin
-      // If removal fails, it's okay - Inno will overwrite files anyway
-    end;
-  end;
-
   // Dev-build consent page (shown only when needed)
   DevBuildConsentPage := CreateCustomPage(wpWelcome,
     'Development build warning',
@@ -472,8 +441,46 @@ begin
 end;
 
 function InitializeSetup(): Boolean;
+var
+  UninstallString: String;
+  ResultCode: Integer;
+  ModulePath: String;
 begin
-  // Keep setup initialization non-interactive; wizard pages and prompts should be handled in InitializeWizard.
+  // **CRITICAL:** Uninstall old version BEFORE wizard starts
+  
+  // Check if PSHVTools is already installed and uninstall old version
+  if RegQueryStringValue(HKLM, 'Software\{#MyAppPublisher}\{#MyAppName}', 'UninstallString', UninstallString) then
+  begin
+    // Uninstall the old version first
+    if FileExists(UninstallString) then
+    begin
+      // Run the uninstaller silently with NORESTART
+      Exec(UninstallString, '/SILENT /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      
+      // Wait longer for uninstaller to complete
+      Sleep(3000);
+    end;
+  end;
+
+  // Always try to clean up the module directory to ensure fresh install
+  ModulePath := ExpandConstant('{commonpf64}\WindowsPowerShell\Modules\pshvtools');
+  if DirExists(ModulePath) then
+  begin
+    // Remove module from memory first
+    Exec('powershell.exe',
+      '-NoProfile -NonInteractive -Command "Remove-Module pshvtools -ErrorAction SilentlyContinue"',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Sleep(1000);
+    
+    // Try to delete the directory multiple times
+    if not RemoveDir(ModulePath) then
+    begin
+      // If it still exists, wait and try again
+      Sleep(1000);
+      RemoveDir(ModulePath);
+    end;
+  end;
+
   Result := True;
 end;
 

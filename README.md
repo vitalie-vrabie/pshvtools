@@ -3,14 +3,14 @@
 **Version:** 1.0.9  
 **Product Name:** PSHVTools (PowerShell Hyper-V Tools)  
 **Module Name:** pshvtools  
-**Commands:** `Invoke-VMBackup`, `Repair-VhdAcl`, `Restore-VMBackup`, `Restore-OrphanedVMs`, `Clone-VM` and aliases: `hvbak`, `hv-bak`, `fix-vhd-acl`, `hvrestore`, `hvrecover`, `hvclone`, `hv-clone`  
+**Commands:** `Invoke-VMBackup`, `Repair-VhdAcl`, `Restore-VMBackup`, `Restore-OrphanedVMs`, `Clone-VM`, `Invoke-VHDCompact` and aliases: `hvbak`, `hv-bak`, `hvfixacl`, `hv-fixacl`, `hvrestore`, `hv-restore`, `hvrecover`, `hv-recover`, `hvnogpup`, `hv-nogpup`, `hvclone`, `hv-clone`, `hvcompact`, `hv-compact`  
 **License:** MIT
 
 ---
 
 ## What is PSHVTools?
 
-PSHVTools is a PowerShell module for backing up and managing Hyper-V virtual machines. It provides cmdlets for automated, parallel VM backups with checkpoint support, 7-Zip compression, VHD permission repair utilities, and VM recovery tools.
+PSHVTools is a PowerShell module for backing up and managing Hyper-V virtual machines. It provides cmdlets for automated, parallel VM backups with checkpoint support, 7-Zip compression, VHD permission repair utilities, VHD compaction, and VM recovery tools.
 
 ### Key Features
 - Live VM backups using Production checkpoints
@@ -21,6 +21,7 @@ PSHVTools is a PowerShell module for backing up and managing Hyper-V virtual mac
 - Graceful cancellation (Ctrl+C support)
 - Low-priority compression (Idle CPU class)
 - VHD/VHDX permission repair utility
+- **VHD/VHDX compaction utility** (reclaim unused space)
 - Restore/import from `hvbak` `.7z` backups (with optional network switch mapping)
 - Recover orphaned VMs by re-registering configs found on disk (scan `Virtual Machines` folder)
 - Utility script to remove GPU partition adapters from VMs (see `scripts/remove-gpu-partitions.ps1`)
@@ -68,7 +69,10 @@ hvbak -NamePattern "*"
 hvrestore -VmName "MyVM" -Latest
 
 # Fix VHD permissions
-fix-vhd-acl
+hvfixacl
+
+# Compact VHDs (reclaim unused space)
+hvcompact -NamePattern "*"
 
 # Recover orphaned VMs
 hvrecover
@@ -305,7 +309,7 @@ hvrestore -VmName "MyVM" -Latest
 hvrecover
 
 # Fix VHD permissions
-fix-vhd-acl
+hvfixacl
 
 # Clone a VM
 hvclone -SourceVmName "BaseWin11" -NewName "Win11-Dev01" -DestinationRoot "D:\Hyper-V"

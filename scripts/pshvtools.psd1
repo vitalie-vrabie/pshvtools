@@ -39,6 +39,7 @@ FunctionsToExport = @(
     'Restore-OrphanedVMs', 
     'Remove-GpuPartitions', 
     'Clone-VM',
+    'Invoke-VHDCompact',
     'Test-PSHVToolsEnvironment',
     'Get-PSHVToolsConfig',
     'Set-PSHVToolsConfig',
@@ -56,14 +57,20 @@ VariablesToExport = @()
 AliasesToExport = @(
     'hvbak', 
     'hv-bak', 
-    'fix-vhd-acl', 
-    'hvrestore', 
-    'hvrecover', 
-    'nogpup', 
+    'hvfixacl',
+    'hv-fixacl',
+    'hvrestore',
+    'hv-restore',
+    'hvrecover',
+    'hv-recover',
+    'hvnogpup',
+    'hv-nogpup',
     'hvclone', 
     'hv-clone',
     'hvhealth',
-    'hv-health'
+    'hv-health',
+    'hvcompact',
+    'hv-compact'
 )
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.

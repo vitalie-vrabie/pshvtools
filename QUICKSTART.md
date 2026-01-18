@@ -19,20 +19,28 @@ After installation, the **pshvtools** module provides:
 
 ### VHD Repair Commands
 - `Repair-VhdAcl` - Full cmdlet name
-- `fix-vhd-acl` - Short alias
+- `hvfixacl` - Short alias
+- `hv-fixacl` - Hyphenated alias
+
+### VHD Compaction Commands
+- `Invoke-VHDCompact` - Full cmdlet name
+- `hvcompact` - Short alias
+- `hv-compact` - Hyphenated alias
 
 ### Restore Commands
 - `Restore-VMBackup` - Full cmdlet name
 - `hvrestore` - Short alias
+- `hv-restore` - Hyphenated alias
 
 ### Recovery Commands
 - `Restore-OrphanedVMs` - Full cmdlet name
 - `hvrecover` - Short alias
+- `hv-recover` - Hyphenated alias
 
-### Clone Commands
-- `Clone-VM` - Full cmdlet name
-- `hvclone` - Short alias
-- `hv-clone` - Hyphenated alias
+### GPU Partition Removal Commands
+- `Remove-GpuPartitions` - Full cmdlet name
+- `hvnogpup` - Short alias
+- `hv-nogpup` - Hyphenated alias
 
 All commands work identically!
 
@@ -60,24 +68,33 @@ Get-Help Invoke-VMBackup -Full
 Get-Help hvbak -Examples
 
 # Display help for VHD repair
-fix-vhd-acl
+hvfixacl
 Get-Help Repair-VhdAcl -Full
-Get-Help fix-vhd-acl -Examples
+Get-Help hvfixacl -Examples
+Get-Help hv-fixacl -Examples
+
+# Display help for VHD compaction
+hvcompact
+Get-Help Invoke-VHDCompact -Full
+Get-Help hvcompact -Examples
 
 # Display help for restore (from .7z backups)
 hvrestore
 Get-Help Restore-VMBackup -Full
 Get-Help hvrestore -Examples
+Get-Help hv-restore -Examples
 
 # Display help for orphaned VM recovery (re-register)
 hvrecover
 Get-Help Restore-OrphanedVMs -Full
 Get-Help hvrecover -Examples
+Get-Help hv-recover -Examples
 
-# Display help for cloning a VM
-hvclone
-Get-Help Clone-VM -Full
-Get-Help hvclone -Examples
+# Display help for GPU partition removal
+hvnogpup
+Get-Help Remove-GpuPartitions -Full
+Get-Help hvnogpup -Examples
+Get-Help hv-nogpup -Examples
 ```
 
 ## Backing Up VMs
@@ -159,20 +176,20 @@ hvclone -SourceVmName "BaseWin11" -NewName "Win11-WhatIf" -DestinationRoot "D:\H
 ### Basic Usage
 
 ```powershell
-# Preview what would be fixed
-fix-vhd-acl -WhatIf
+# Fix all VMs on the host (using new alias)
+hvfixacl
 
-# Fix all VMs on the host
-fix-vhd-acl
+# Fix all VMs using hyphenated alias
+hv-fixacl
 
 # Fix VHDs in a specific folder
-fix-vhd-acl -VhdFolder "D:\Restores"
+hvfixacl -VhdFolder "D:\Restores"
 
 # Fix VHDs from a CSV list
-fix-vhd-acl -VhdListCsv "C:\temp\vhds.csv"
+hvfixacl -VhdListCsv "C:\temp\vhds.csv"
 
 # Specify custom log file
-Repair-VhdAcl -LogFile "C:\Logs\vhd-fix.log"
+hvfixacl -LogFile "C:\Logs\hvfixacl.log"
 ```
 
 ### CSV Format for VhdListCsv
@@ -189,7 +206,7 @@ Path,VMId
 
 ### What It Does
 
-The `fix-vhd-acl` command:
+The `hvfixacl` command:
 1. Takes ownership of VHD/VHDX files
 2. Grants permissions to:
    - **SYSTEM** - Full Control
@@ -202,6 +219,76 @@ The `fix-vhd-acl` command:
 - After copying VHDs between hosts
 - When VMs can't start due to permission errors
 - After moving VHDs to different folders
+
+## Compacting VHDs
+
+Compact VHDs to reclaim unused space and reduce file size. VMs must be stopped before compacting.
+
+### Basic Usage
+
+```powershell
+# Compact all VHDs for all VMs
+hvcompact -NamePattern "*"
+
+# Compact VHDs for specific VMs
+hvcompact -NamePattern "srv-*"
+hv-compact -NamePattern "web-*"
+
+# Using positional parameter
+hvcompact "*"
+```
+
+### What It Does
+
+The `hvcompact` command:
+1. Searches for VMs matching the name pattern
+2. Verifies each VM is stopped (Off state)
+3. Finds all attached VHD/VHDX disks
+4. Compacts each disk using full reclamation mode
+5. Reports status and summary
+
+**Output shows:**
+- VMs being processed
+- Disk count per VM
+- Compaction status (Success/Error) for each disk
+- Summary of total VMs, disks compacted, and errors
+
+### Use Cases
+
+```powershell
+# Recover space after VM data deletion
+hvcompact "prod-*"
+
+# Weekly maintenance routine
+hvcompact "*"
+
+# Compact specific VM before backup
+hvcompact "web-server-01"
+
+# Using hyphenated alias
+hv-compact "*"
+```
+
+### Important Notes
+
+- **VM must be stopped:** Compaction requires the VM to be in an Off state
+- **Time-consuming:** Compaction time depends on VHD size (can take minutes/hours)
+- **Read-only during compaction:** VHD is briefly mounted during the operation
+- **Administrator required:** Must run with elevated privileges
+- **No data loss:** Compaction only reclaims unused space, doesn't affect data
+
+### Compaction Behavior
+
+```powershell
+# Compact returns immediately if VM is not stopped
+hvcompact "running-vm"  # WARNING: VM is not in stopped state. Skipping compaction.
+
+# Check summary after completion
+# Output shows:
+# - VMs processed
+# - Disks compacted
+# - Errors encountered
+```
 
 ## Restoring VMs
 
@@ -269,13 +356,7 @@ Import-Module pshvtools
 Get-Command -Module pshvtools
 
 # Check aliases
-Get-Alias hvbak, hv-bak, fix-vhd-acl, hvrestore, hvrecover
-
-# Display help for each command
-hvbak
-fix-vhd-acl
-hvrestore
-hvrecover
+Get-Alias hvbak, hv-bak, hvfixacl, hv-fixacl, hvrestore, hv-restore, hvrecover, hv-recover, hvnogpup, hv-nogpup, hvcompact, hv-compact
 ```
 
 ## Understanding Progress
@@ -346,13 +427,13 @@ hvbak -NamePattern "dev-*" -Destination "D:\Backups\Dev" -KeepCount 3
 Import-Module pshvtools
 
 # Fix permissions for all restored VMs
-fix-vhd-acl
+hvfixacl
 
 # Or just for a specific folder
-fix-vhd-acl -VhdFolder "D:\Restored\VMs"
+hvfixacl -VhdFolder "D:\Restored\VMs"
 
 # Check the log for any issues
-Get-Content "$env:TEMP\FixVhdAcl.log" -Tail 50
+Get-Content "$env:TEMP\hvfixacl.log" -Tail 50
 ```
 
 ### Maintenance Script
@@ -365,7 +446,10 @@ Import-Module pshvtools
 hvbak -NamePattern "*" -KeepCount 4
 
 # Fix any permission issues
-fix-vhd-acl
+hvfixacl
+
+# Compact VHDs to reclaim space
+hvcompact -NamePattern "*"
 
 # Report
 Write-Host "Maintenance complete!" -ForegroundColor Green
@@ -419,7 +503,7 @@ $env:PSModulePath -split ';'
 Test-Path "C:\Program Files\WindowsPowerShell\Modules\pshvtools\pshvtools.psd1"
 Test-Path "C:\Program Files\WindowsPowerShell\Modules\pshvtools\pshvtools.psm1"
 Test-Path "C:\Program Files\WindowsPowerShell\Modules\pshvtools\hvbak.ps1"
-Test-Path "C:\Program Files\WindowsPowerShell\Modules\pshvtools\fix-vhd-acl.ps1"
+Test-Path "C:\Program Files\WindowsPowerShell\Modules\pshvtools\hvfixacl.ps1"
 ```
 
 ### Backup Job Failed
@@ -443,24 +527,27 @@ Common issues:
 whoami /groups | findstr /i "S-1-16-12288"  # Should show High Mandatory Level
 
 # Check the log for details
-Get-Content "$env:TEMP\FixVhdAcl.log"
+Get-Content "$env:TEMP\hvfixacl.log"
 
 # Try with -WhatIf first
-fix-vhd-acl -WhatIf
+hvfixacl -WhatIf
 ```
 
 ## Pro Tips
 
 1. **Tab completion:** Type `hvbak -` and press Tab to cycle through parameters
-2. **Use aliases:** Choose whichever you prefer - `hvbak`, `hv-bak`, or `Invoke-VMBackup`
-3. **Check help anytime:** Run `hvbak` or `fix-vhd-acl` without parameters
+2. **Use aliases:** Choose short (`hvbak`, `hvfixacl`, `hvrestore`, `hvrecover`, `hvnogpup`, `hvcompact`) or hyphenated forms (`hv-*`)
+3. **Check help anytime:** Run any command without parameters to see help
 4. **Wildcards work:** Use patterns like `"web-*"`, `"*-prod"`, `"server-?"`
-5. **Ctrl+C to cancel:** Gracefully stops backups and cleans up resources
+5. **Ctrl+C to cancel:** Gracefully stops backups, compactions, and cleans up resources
 6. **Monitor progress:** Watch real-time progress bars for each VM
-7. **Check logs:** VHD fix operations log to `$env:TEMP\FixVhdAcl.log`
+7. **Check logs:** VHD fix operations log to `$env:TEMP\hvfixacl.log`
 8. **Use -WhatIf:** Preview VHD permission fixes before applying
 9. **Adjust retention:** Change `KeepCount` based on storage capacity
-10. **Schedule it:** Create scheduled tasks for automated backups
+10. **Schedule it:** Create scheduled tasks for automated backups and compactions
+11. **Compact regularly:** Compact VHDs after VM data deletion to reclaim space
+12. **Pre-backup compaction:** Compact VHDs before backup to reduce archive size
+13. **Consistent naming:** All PSHVTools commands follow pattern: `hv<command>` and `hv-<command>`
 
 ## Additional Resources
 
@@ -476,17 +563,24 @@ fix-vhd-acl -WhatIf
 # Explore all parameters
 Get-Help Invoke-VMBackup -Parameter *
 Get-Help Repair-VhdAcl -Parameter *
+Get-Help Invoke-VHDCompact -Parameter *
 Get-Help Restore-VMBackup -Parameter *
 Get-Help Restore-OrphanedVMs -Parameter *
 
 # See examples
 Get-Help hvbak -Examples
-Get-Help fix-vhd-acl -Examples
+Get-Help hvfixacl -Examples
 Get-Help hvrestore -Examples
+Get-Help hv-restore -Examples
 Get-Help hvrecover -Examples
+Get-Help hv-recover -Examples
+Get-Help hvnogpup -Examples
+Get-Help hv-nogpup -Examples
+Get-Help hvcompact -Examples
 
 # View online help (if available)
 Get-Help Invoke-VMBackup -Online
+Get-Help Invoke-VHDCompact -Online
 ```
 
 ---

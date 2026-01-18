@@ -44,7 +44,7 @@ function Invoke-VMBackup {
       Exports all VMs to %USERPROFILE%\hvbak-archives\YYYYMMDD using default temp folder
 
     .EXAMPLE
-      hv-bak -NamePattern "srv-*" -Destination "D:\backups" -TempFolder "E:\temp"
+      hv -bak -NamePattern "srv-*" -Destination "D:\backups" -TempFolder "E:\temp"
       Exports VMs matching "srv-*" to D:\backups\YYYYMMDD using E:\temp as temporary folder
 
     .EXAMPLE
@@ -373,7 +373,7 @@ function Repair-VhdAcl {
       Path to CSV file with columns: Path (required), VMId (optional GUID without braces).
 
     .PARAMETER LogFile
-      Path to log file. Default: C:\Temp\FixVhdAcl.log
+      Path to log file. Default: %TEMP%\hvfixacl.log
 
     .EXAMPLE
       Repair-VhdAcl -VhdFolder "D:\Restores"
@@ -390,7 +390,7 @@ function Repair-VhdAcl {
     .NOTES
       - Run elevated (Administrator) required
       - Takes ownership and grants permissions to SYSTEM, Administrators, and VM account
-      - Available as 'Repair-VhdAcl' and 'fix-vhd-acl' commands
+      - Available as 'hvfixacl', 'hv-fixacl' or 'Repair-VhdAcl'
     #>
 
     [CmdletBinding()]
@@ -402,14 +402,14 @@ function Repair-VhdAcl {
         [string]$VhdListCsv,
 
         [Parameter(Mandatory = $false)]
-        [string]$LogFile = "$env:TEMP\FixVhdAcl.log"
+        [string]$LogFile = "$env:TEMP\hvfixacl.log"
     )
 
     # Get the path to the actual script
-    $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "fix-vhd-acl.ps1"
+    $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "hvfixacl.ps1"
     
     if (-not (Test-Path $scriptPath)) {
-        Write-Error "fix-vhd-acl.ps1 not found at: $scriptPath"
+        Write-Error "hvfixacl.ps1 not found at: $scriptPath"
         return
     }
 
@@ -592,16 +592,17 @@ function Restore-OrphanedVMs {
 function Remove-GpuPartitions {
     <#
     .SYNOPSIS
-      Removes all GPU partition adapter assignments from Hyper-V VMs.
+      Remove GPU partition adapters from VMs matching a wildcard name pattern.
 
     .DESCRIPTION
-      Wrapper around remove-gpu-partitions.ps1.
+      Enumerates all VMs matching NamePattern and removes all GPU partition adapters (RemoteFX 3D Video) from each.
+      No action is taken if a VM has no GPU partitions.
 
     .PARAMETER NamePattern
       Wildcard pattern matching VM names (e.g. "*", "lab-*", "win11*").
 
     .EXAMPLE
-      nogpup -NamePattern "lab-*"
+      hvnogpup -NamePattern "lab-*"
     #>
 
     [CmdletBinding()]
@@ -628,6 +629,150 @@ function Remove-GpuPartitions {
     & $scriptPath @params
 }
 
+function Invoke-VHDCompact {
+    <#
+    .SYNOPSIS
+      Compact all VHDs of VMs specified as a parameter with * wildcard in their names.
+
+    .DESCRIPTION
+      For each VM matching the provided NamePattern this function:
+        - Retrieves all VHD/VHDX disks attached to the VM.
+        - Compacts each disk using Optimize-VHD with full reclamation mode.
+        - Reports progress and status for each compaction operation.
+        - Requires the VM to be stopped before compacting.
+
+    .PARAMETER NamePattern
+      Wildcard pattern to match VM names (e.g., "*" for all VMs, "web-*" for VMs starting with "web-").
+
+    .EXAMPLE
+      hvcompact -NamePattern "*"
+      Compacts all VHDs of all VMs.
+
+    .EXAMPLE
+      hvcompact -NamePattern "srv-*"
+      Compacts all VHDs of VMs matching "srv-*".
+
+    .EXAMPLE
+      hvcompact "web-*"
+      Positional parameter - compacts all VHDs of VMs matching "web-*".
+
+    .NOTES
+      - Run elevated (Administrator) on the Hyper-V host.
+      - VMs must be stopped before VHD compaction can proceed.
+      - Compaction can be time-consuming depending on VHD size.
+      - Compaction releases unused space from the VHD to the host storage.
+      - Available as 'hvcompact' command.
+    #>
+
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false, Position = 0)]
+        [string]$NamePattern
+    )
+
+    if ([string]::IsNullOrWhiteSpace($NamePattern)) {
+        Get-Help Invoke-VHDCompact -Full
+        return
+    }
+
+    # Verify admin privileges
+    if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+        Write-Error "This function must be run as Administrator."
+        return
+    }
+
+    try {
+        # Get VMs matching the pattern
+        Write-Host "Searching for VMs matching pattern: $NamePattern" -ForegroundColor Cyan
+        $vms = @(Get-VM -Name $NamePattern -ErrorAction Stop)
+
+        if ($vms.Count -eq 0) {
+            Write-Host "No VMs found matching pattern: $NamePattern" -ForegroundColor Yellow
+            return
+        }
+
+        Write-Host "Found $($vms.Count) VM(s) to process" -ForegroundColor Green
+        Write-Host ""
+
+        $totalDisksCompacted = 0
+        $totalErrors = 0
+
+        foreach ($vm in $vms) {
+            $vmName = $vm.Name
+            $vmState = $vm.State
+
+            Write-Host "Processing VM: $vmName (State: $vmState)" -ForegroundColor Cyan
+
+            # Check if VM is stopped
+            if ($vmState -ne "Off") {
+                Write-Host "  WARNING: VM is not in stopped state. Skipping compaction." -ForegroundColor Yellow
+                continue
+            }
+
+            try {
+                # Get all hard disk drives for this VM
+                $disks = @(Get-VMHardDiskDrive -VMName $vmName -ErrorAction Stop)
+
+                if ($disks.Count -eq 0) {
+                    Write-Host "  No VHDs attached to this VM" -ForegroundColor Gray
+                    continue
+                }
+
+                Write-Host "  Found $($disks.Count) disk(s) attached" -ForegroundColor Gray
+
+                foreach ($disk in $disks) {
+                    $diskPath = $disk.Path
+                    $diskController = $disk.ControllerNumber
+                    $diskLocation = $disk.ControllerLocation
+
+                    if (-not $diskPath) {
+                        Write-Host "    WARNING: Disk controller $diskController, location $diskLocation has no path. Skipping." -ForegroundColor Yellow
+                        continue
+                    }
+
+                    if (-not (Test-Path $diskPath)) {
+                        Write-Host "    WARNING: Disk path not found: $diskPath" -ForegroundColor Yellow
+                        continue
+                    }
+
+                    Write-Host "    Compacting: $diskPath" -ForegroundColor Gray
+
+                    try {
+                        # Compact the VHD using full reclamation
+                        Optimize-VHD -Path $diskPath -Mode Full -ErrorAction Stop
+                        Write-Host "      SUCCESS: Compaction completed" -ForegroundColor Green
+                        $totalDisksCompacted++
+                    } catch {
+                        Write-Host "      ERROR: Compaction failed - $_" -ForegroundColor Red
+                        $totalErrors++
+                    }
+                }
+            } catch {
+                Write-Host "  ERROR: Failed to process VM - $_" -ForegroundColor Red
+                $totalErrors++
+            }
+
+            Write-Host ""
+        }
+
+        # Summary
+        Write-Host "========================================" -ForegroundColor Cyan
+        Write-Host "Compaction Summary:" -ForegroundColor Cyan
+        Write-Host "  VMs processed: $($vms.Count)" -ForegroundColor Green
+        Write-Host "  Disks compacted: $totalDisksCompacted" -ForegroundColor Green
+        Write-Host "  Errors: $totalErrors" -ForegroundColor $(if ($totalErrors -gt 0) { "Red" } else { "Green" })
+        Write-Host "========================================" -ForegroundColor Cyan
+
+        if ($totalErrors -gt 0) {
+            return
+        }
+
+    } catch {
+        Write-Error "Fatal error: $_"
+        return
+    }
+}
+
 # Import additional module components
 $configModule = Join-Path -Path $PSScriptRoot -ChildPath 'PSHVTools.Config.psm1'
 if (Test-Path -LiteralPath $configModule) {
@@ -642,14 +787,20 @@ if (Test-Path -LiteralPath $healthCheckScript) {
 # Create aliases for shorter commands
 New-Alias -Name hvbak -Value Invoke-VMBackup -Force
 New-Alias -Name hv-bak -Value Invoke-VMBackup -Force
-New-Alias -Name fix-vhd-acl -Value Repair-VhdAcl -Force
+New-Alias -Name hvfixacl -Value Repair-VhdAcl -Force
+New-Alias -Name hv-fixacl -Value Repair-VhdAcl -Force
 New-Alias -Name hvrestore -Value Restore-VMBackup -Force
+New-Alias -Name hv-restore -Value Restore-VMBackup -Force
 New-Alias -Name hvrecover -Value Restore-OrphanedVMs -Force
-New-Alias -Name nogpup -Value Remove-GpuPartitions -Force
+New-Alias -Name hv-recover -Value Restore-OrphanedVMs -Force
+New-Alias -Name hvnogpup -Value Remove-GpuPartitions -Force
+New-Alias -Name hv-nogpup -Value Remove-GpuPartitions -Force
 New-Alias -Name hvclone -Value Clone-VM -Force
 New-Alias -Name hv-clone -Value Clone-VM -Force
 New-Alias -Name hvhealth -Value Test-PSHVToolsEnvironment -Force
 New-Alias -Name hv-health -Value Test-PSHVToolsEnvironment -Force
+New-Alias -Name hvcompact -Value Invoke-VHDCompact -Force
+New-Alias -Name hv-compact -Value Invoke-VHDCompact -Force
 
 # Export the functions and aliases
 Export-ModuleMember -Function @(
@@ -659,6 +810,7 @@ Export-ModuleMember -Function @(
     'Restore-OrphanedVMs',
     'Remove-GpuPartitions',
     'Clone-VM',
+    'Invoke-VHDCompact',
     'Test-PSHVToolsEnvironment',
     'Get-PSHVToolsConfig',
     'Set-PSHVToolsConfig',
@@ -667,12 +819,18 @@ Export-ModuleMember -Function @(
 ) -Alias @(
     'hvbak',
     'hv-bak',
-    'fix-vhd-acl',
+    'hvfixacl',
+    'hv-fixacl',
     'hvrestore',
+    'hv-restore',
     'hvrecover',
-    'nogpup',
+    'hv-recover',
+    'hvnogpup',
+    'hv-nogpup',
     'hvclone',
     'hv-clone',
     'hvhealth',
-    'hv-health'
+    'hv-health',
+    'hvcompact',
+    'hv-compact'
 )

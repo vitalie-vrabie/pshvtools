@@ -25,6 +25,12 @@ jobs:
       run: |
         choco install innosetup -y
         
+    - name: Build GUI Application
+      shell: pwsh
+      run: |
+        cd PSHVTools.GUI/PSHVToolsShell
+        dotnet build --configuration Release
+        
     - name: Update Documentation and Samples
       shell: pwsh
       run: |

@@ -31,6 +31,10 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 
+; **CRITICAL:** Force overwrite old installation
+UninstallFilesDir={app}\uninstall
+UsePreviousAppDir=no
+
 ; Output settings
 OutputDir=..\dist
 OutputBaseFilename=PSHVTools-Setup
@@ -442,48 +446,28 @@ end;
 
 function InitializeSetup(): Boolean;
 var
+  UninstallExe: String;
   ModulePath: String;
-  AppPath: String;
   ResultCode: Integer;
-  i: Integer;
 begin
-  // **CRITICAL:** Force-clean old PSHVTools installation BEFORE wizard starts
-  
-  // Kill any PowerShell processes that might have the module loaded
-  Exec('taskkill.exe', '/F /IM powershell.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Look for existing uninstaller and run it
+  UninstallExe := ExpandConstant('{app}\uninstall\unins000.exe');
+  if FileExists(UninstallExe) then
+  begin
+    // Run the old uninstaller silently
+    Exec(UninstallExe, '/SILENT /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Sleep(2000);
+  end;
+
+  // Force-kill any PowerShell sessions to release module locks
+  Exec('powershell.exe', '-NoProfile -Command "Stop-Process -Name powershell -Force -ErrorAction SilentlyContinue"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(1000);
-  
-  // Force-clean the module directory
+
+  // Clean up module directory (Inno will overwrite anyway with UsePreviousAppDir=no)
   ModulePath := ExpandConstant('{commonpf64}\WindowsPowerShell\Modules\pshvtools');
   if DirExists(ModulePath) then
   begin
-    // Try multiple times to delete
-    for i := 1 to 3 do
-    begin
-      if RemoveDir(ModulePath) then
-        break;
-      Sleep(500);
-    end;
-  end;
-
-  // Force-clean the app installation directory  
-  AppPath := ExpandConstant('{autopf}\PSHVTools');
-  if DirExists(AppPath) then
-  begin
-    // Try multiple times to delete
-    for i := 1 to 3 do
-    begin
-      if RemoveDir(AppPath) then
-        break;
-      Sleep(500);
-    end;
-  end;
-  
-  // Clean up Start Menu shortcuts
-  try
-    RemoveDir(ExpandConstant('{commonprograms}\PSHVTools'));
-  except
-    // Ignore errors
+    RemoveDir(ModulePath);
   end;
 
   Result := True;

@@ -1,6 +1,6 @@
 # PSHVTools - PowerShell Hyper-V Tools
 
-**Version:** 1.0.9  
+**Version:** 1.0.11  
 **Product Name:** PSHVTools (PowerShell Hyper-V Tools)  
 **Module Name:** pshvtools  
 **Commands:** `Invoke-VMBackup`, `Repair-VhdAcl`, `Restore-VMBackup`, `Restore-OrphanedVMs`, `Clone-VM`, `Invoke-VHDCompact` and aliases: `hvbak`, `hv-bak`, `hvfixacl`, `hv-fixacl`, `hvrestore`, `hv-restore`, `hvrecover`, `hv-recover`, `hvnogpup`, `hv-nogpup`, `hvclone`, `hv-clone`, `hvcompact`, `hv-compact`  
@@ -386,5 +386,9 @@ Copyright (c) 2026 Vitalie Vrabie
 
 ## ?? Version History
 
-### Version 1.0.8 (Unreleased)
-- See `CHANGELOG.md`.
+### Version 1.0.11 (Current)
+- Added `hvcompact` command for VHD compaction
+- Added `hvfixacl` command for VHD ACL repair
+- Added standardized hyphenated aliases (`hv-*`) for all commands
+- Removed legacy aliases (`fix-vhd-acl`, `nogpup`)
+- See `CHANGELOG.md` for complete details

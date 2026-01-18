@@ -12,6 +12,38 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Fixed
 
+## [1.0.11] - 2026-01-17
+
+### Added
+- New `hvcompact` command (`Invoke-VHDCompact`) - Compact VHDs of VMs matching a wildcard pattern
+  - Aliases: `hv-compact`, `Invoke-VHDCompact`
+  - Supports Full reclamation mode for VHD compaction
+  - Real-time progress reporting
+- New `hvfixacl` command (`Repair-VhdAcl`) - Renamed from legacy `fix-vhd-acl`
+  - Primary aliases: `hvfixacl`, `hv-fixacl`
+  - Cleaner naming convention matching other PSHVTools commands
+  - Updated log file to `hvfixacl.log`
+- New `hv-*` hyphenated aliases for consistency:
+  - `hv-restore` for `Restore-VMBackup`
+  - `hv-recover` for `Restore-OrphanedVMs`
+  - `hvnogpup`/`hv-nogpup` for `Remove-GpuPartitions`
+
+### Changed
+- Renamed primary alias from `fix-vhd-acl` to `hvfixacl` (with hyphenated alias `hv-fixacl`)
+- Renamed primary alias from `nogpup` to `hvnogpup` (with hyphenated alias `hv-nogpup`)
+- All PSHVTools commands now follow consistent naming: `hv<command>` and `hv-<command>`
+- Updated all documentation to reflect new naming convention
+- Updated all sample files to use new aliases
+
+### Removed
+- Legacy alias `fix-vhd-acl` (use `hvfixacl` or `hv-fixacl` instead)
+- Legacy alias `nogpup` (use `hvnogpup` or `hv-nogpup` instead)
+
+### Documentation
+- Added comprehensive samples for VHD compaction and ACL repair
+- Updated QUICKSTART.md with new commands and aliases
+- Updated README.md command reference
+
 ## [1.0.9] - 2026-01-17
 
 ### Added

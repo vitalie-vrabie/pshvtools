@@ -1,13 +1,13 @@
 ; PSHVTools Inno Setup Script
 ; Creates a professional Windows installer with GUI wizard
-; Version 1.0.9
+; Version 1.0.11
 
 #define MyAppName "PSHVTools"
 #ifndef MyAppVersion
-#define MyAppVersion "1.0.10"
+#define MyAppVersion "1.0.11"
 #endif
 #ifndef MyAppLatestStableVersion
-#define MyAppLatestStableVersion "1.0.9"
+#define MyAppLatestStableVersion "1.0.11"
 #endif
 
 #define MyAppPublisher "Vitalie Vrabie"

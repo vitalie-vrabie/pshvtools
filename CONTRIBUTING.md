@@ -279,8 +279,8 @@ Version is managed in `version.json`:
 
 ```json
 {
-  "version": "1.0.9",
-  "stableVersion": "1.0.8",
+  "version": "1.0.11",
+  "stableVersion": "1.0.11",
   "releaseDate": "2026-01-17"
 }
 ```

@@ -94,11 +94,11 @@ if not exist "%REPO_ROOT%\scripts\fix-vhd-acl.ps1" (
     echo   [OK] scripts\fix-vhd-acl.ps1
 )
 
-if not exist "%REPO_ROOT%\QUICKSTART.md" (
-    echo   [MISSING] QUICKSTART.md
+if not exist "%REPO_ROOT%\docs\QUICKSTART.md" (
+    echo   [MISSING] docs\QUICKSTART.md
     set "MISSING_FILES=1"
 ) else (
-    echo   [OK] QUICKSTART.md
+    echo   [OK] docs\QUICKSTART.md
 )
 
 if not exist "%SCRIPT_DIR%\PSHVTools-Installer.iss" (
@@ -139,6 +139,7 @@ REM Build with Inno Setup
 echo Building EXE installer...
 echo.
 
+REM Build using the installer script in the installer folder (installer script has been updated to reference docs/ and omits GUI when not present)
 "!ISCC_PATH!" "%SCRIPT_DIR%\PSHVTools-Installer.iss"
 
 if !errorlevel! neq 0 (

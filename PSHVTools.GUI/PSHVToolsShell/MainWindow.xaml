@@ -6,13 +6,47 @@
         xmlns:local="clr-namespace:PSHVToolsShell"
         mc:Ignorable="d"
         Title="PSHVTools - Hyper-V VM Backup GUI" Height="500" Width="600" WindowStartupLocation="CenterScreen">
-    <Grid>
-        <Label Content="PSHVTools - Professional Hyper-V VM Backup Tools" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0"/>
-        <Button x:Name="BackupButton" Content="Backup All VMs" HorizontalAlignment="Left" VerticalAlignment="Top" Width="150" Height="40" Margin="10,50,0,0" Click="BackupButton_Click"/>
-        <Button x:Name="CompactButton" Content="Compact VHDs" HorizontalAlignment="Left" VerticalAlignment="Top" Width="150" Height="40" Margin="170,50,0,0" Click="CompactButton_Click"/>
-        <Button x:Name="HealthButton" Content="Health Check" HorizontalAlignment="Left" VerticalAlignment="Top" Width="150" Height="40" Margin="330,50,0,0" Click="HealthButton_Click"/>
-        <Button x:Name="ConfigButton" Content="Show Config" HorizontalAlignment="Left" VerticalAlignment="Top" Width="150" Height="40" Margin="10,110,0,0" Click="ConfigButton_Click"/>
-        <Button x:Name="RestoreButton" Content="Restore VMs" HorizontalAlignment="Left" VerticalAlignment="Top" Width="150" Height="40" Margin="170,110,0,0" Click="RestoreButton_Click"/>
-        <Button x:Name="ExitButton" Content="Exit" HorizontalAlignment="Left" VerticalAlignment="Top" Width="100" Height="40" Margin="10,400,0,0" Click="ExitButton_Click"/>
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="PSHVTools - Professional Hyper-V VM Backup GUI" FontWeight="Bold" FontSize="14" Margin="4" />
+
+        <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,8,0,8" VerticalAlignment="Top">
+            <StackPanel Width="360">
+                <StackPanel Orientation="Horizontal" Margin="0,4">
+                    <Label Content="Name Pattern:" Width="100" VerticalAlignment="Center" />
+                    <TextBox x:Name="NamePatternBox" Width="240" Text="*" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,4">
+                    <Label Content="Destination:" Width="100" VerticalAlignment="Center" />
+                    <TextBox x:Name="DestinationBox" Width="240" Text="C:\\Backups" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,4">
+                    <Label Content="Keep:" Width="100" VerticalAlignment="Center" />
+                    <TextBox x:Name="KeepBox" Width="80" Text="5" />
+                    <Label Content="Compression:" Width="80" Margin="10,0,0,0" VerticalAlignment="Center" />
+                    <TextBox x:Name="CompressionBox" Width="40" Text="7" />
+                    <CheckBox x:Name="WhatIfBox" Content="WhatIf" Margin="10,0,0,0" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Margin="16,0,0,0">
+                <Button x:Name="BackupButton" Content="Backup" Width="120" Height="36" Margin="0,0,0,8" Click="BackupButton_Click" />
+                <Button x:Name="CompactButton" Content="Compact VHDs" Width="120" Height="36" Margin="0,0,0,8" Click="CompactButton_Click" />
+                <Button x:Name="RestoreButton" Content="Restore Orphans" Width="120" Height="36" Margin="0,0,0,8" Click="RestoreButton_Click" />
+                <Button x:Name="HealthButton" Content="Health Check" Width="120" Height="36" Margin="0,0,0,8" Click="HealthButton_Click" />
+                <Button x:Name="ConfigButton" Content="Show Config" Width="120" Height="36" Margin="0,0,0,8" Click="ConfigButton_Click" />
+            </StackPanel>
+        </StackPanel>
+
+        <GroupBox Header="Output" Grid.Row="2">
+            <Grid>
+                <TextBox x:Name="OutputBox" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AcceptsReturn="True" />
+            </Grid>
+        </GroupBox>
     </Grid>
 </Window>

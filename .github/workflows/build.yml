@@ -73,10 +73,10 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Publish GUI application
+    - name: Publish GUI application (self-contained)
       shell: pwsh
       run: |
-        dotnet publish PSHVTools.GUI/PSHVToolsShell/PSHVToolsShell.csproj -c Release -r win-x64 -f net10.0-windows --self-contained false
+        dotnet publish PSHVTools.GUI/PSHVToolsShell/PSHVToolsShell.csproj -c Release -r win-x64 -f net10.0-windows --self-contained true
         
     - name: Build Installer
       shell: pwsh

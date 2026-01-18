@@ -331,19 +331,19 @@ begin
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(500);
 
-  // Remove files from app directory (but keep directory)
+  // Remove entire app directory (even if nonempty)
   AppPath := ExpandConstant('{autopf}\PSHVTools');
   if DirExists(AppPath) then
   begin
-    Exec('cmd.exe', '/c del /q "' + AppPath + '\*.*"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('cmd.exe', '/c rmdir /s /q "' + AppPath + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Sleep(500);
   end;
 
-  // Remove files from module directory (but keep directory so installer can copy to it)
+  // Remove entire module directory (even if nonempty)
   ModulePath := ExpandConstant('{commonpf64}\WindowsPowerShell\Modules\pshvtools');
   if DirExists(ModulePath) then
   begin
-    Exec('cmd.exe', '/c del /q "' + ModulePath + '\*.*"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('cmd.exe', '/c rmdir /s /q "' + ModulePath + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Sleep(500);
   end;
 

@@ -19,7 +19,15 @@ public partial class MainWindow : Window
 {
     public MainWindow()
     {
-        InitializeComponent();
+        try
+        {
+            InitializeComponent();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error initializing window: {ex.Message}", "Error");
+            throw;
+        }
     }
 
     private void RunPowerShellCommand(string command)

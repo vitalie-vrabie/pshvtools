@@ -157,6 +157,51 @@ begin
     RequireDevBuildConsent(NormalizeVersionForCompare('{#MyAppVersion}'), NormalizeVersionForCompare('{#MyAppLatestStableVersion}'), 'Latest stable release');
 end;
 
+function CheckPowerShellVersion(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := Exec('powershell.exe', 
+    '-NoProfile -NonInteractive -Command "if ($PSVersionTable.PSVersion.Major -ge 5) { exit 0 } else { exit 1 }"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := (ResultCode = 0);
+end;
+
+function CheckHyperV(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := Exec('powershell.exe', 
+    '-NoProfile -NonInteractive -Command "if (Get-Command Get-VM -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := (ResultCode = 0);
+end;
+
+function Check7Zip(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := Exec('cmd.exe',
+    '/c where 7z.exe >nul 2>&1',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if Result and (ResultCode = 0) then
+  begin
+    Result := True;
+    exit;
+  end;
+  if FileExists(ExpandConstant('{pf}\7-Zip\7z.exe')) then
+  begin
+    Result := True;
+    exit;
+  end;
+  if FileExists(ExpandConstant('{pf32}\7-Zip\7z.exe')) then
+  begin
+    Result := True;
+    exit;
+  end;
+  Result := False;
+end;
+
 function InitializeSetup(): Boolean;
 var
   ResultCode: Integer;

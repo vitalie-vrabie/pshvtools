@@ -1,4 +1,4 @@
-# PSHVTools v1.1.0
+# PSHVTools v1.1.1
 
 Release date: 2026-01-18
 

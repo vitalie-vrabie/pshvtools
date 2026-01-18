@@ -1,8 +1,8 @@
-# PSHVTools v1.0.13
+# PSHVTools v1.0.14
 
 Release date: 2026-01-18
 
-> This is the release notes for the tagged release `v1.0.13`.
+> This is the release notes for the tagged release `v1.0.14`.
 > For ongoing development toward the next release (e.g. v1.1.0), see `CHANGELOG.md` under **[Unreleased]**.
 
 ## Highlights

@@ -20,6 +20,13 @@
     <ProjectReference Include="..\PSHVTools.GUI\PSHVToolsShell\PSHVToolsShell.csproj" />
   </ItemGroup>
 
+  <!-- Publish the GUI shell project before running the installer build script so
+       the published executable is available to be included in the Inno Setup package. -->
+  <Target Name="PublishGui" BeforeTargets="RunInstallerScript">
+    <Message Text="Publishing GUI shell project (Release, win-x64)..." Importance="high" />
+    <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)\..\PSHVTools.GUI\PSHVToolsShell\PSHVToolsShell.csproj&quot; -c Release -r win-x64 --self-contained false -o &quot;$(MSBuildProjectDirectory)\..\PSHVTools.GUI\PSHVToolsShell\bin\Release\net10.0-windows\win-x64\publish&quot;" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
   <!-- Run the installer build script after the normal MSBuild Build target finishes.
        Using cmd /c ensures .bat files are executed correctly in all environments. -->
   <Target Name="RunInstallerScript" AfterTargets="Build">

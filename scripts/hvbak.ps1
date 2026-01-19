@@ -97,6 +97,40 @@ if ([string]::IsNullOrWhiteSpace($NamePattern) -and $args.Count -ge 1 -and -not 
     $NamePattern = [string]$args[0]
 }
 
+        function Remove-DirRobust {
+            param([string]$Path)
+
+            if (-not $Path) { return $false }
+
+            # Fast path
+            try { if (-not (Test-Path -LiteralPath $Path)) { return $true } } catch {}
+
+            # Try a few times with attribute reset to handle locked/readonly files
+            for ($i = 0; $i -lt 5; $i++) {
+                try {
+                    if (Test-Path -LiteralPath $Path) {
+                        # Clear read-only / hidden attributes where possible
+                        try {
+                            Get-ChildItem -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object { try { $_.Attributes = 'Archive' } catch {} }
+                        } catch {}
+
+                        Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+                    }
+                    return $true
+                } catch {
+                    Start-Sleep -Milliseconds 250
+                }
+            }
+
+            # Fallback to cmd.exe rd which can succeed where PowerShell Remove-Item fails
+            try {
+                cmd.exe /c "rd /s /q \"$Path\"" 2>$null
+                if (-not (Test-Path -LiteralPath $Path)) { return $true }
+            } catch {}
+
+            return $false
+        }
+
 # Display help if no NamePattern provided
 if ([string]::IsNullOrWhiteSpace($NamePattern)) {
     Get-Help $MyInvocation.MyCommand.Path -Full
@@ -728,9 +762,12 @@ foreach ($vm in $vms) {
             try {
                 if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
                     LocalLog ("Archive created; removing per-VM temp folder before move: {0}" -f $vmTemp)
-                    Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction Stop
-                    LocalLog ("Removed per-VM temp folder: {0}" -f $vmTemp)
-                    $vmTemp = $null
+                    if (Remove-DirRobust -Path $vmTemp) {
+                        LocalLog ("Removed per-VM temp folder: {0}" -f $vmTemp)
+                        $vmTemp = $null
+                    } else {
+                        LocalLog ("Warning: Failed to remove per-VM temp folder using Remove-DirRobust: {0}" -f $vmTemp)
+                    }
                 }
             } catch {
                 LocalLog ("Failed to remove per-VM temp folder before move {0}: {1}" -f $vmTemp, $_)
@@ -792,9 +829,12 @@ foreach ($vm in $vms) {
                 try {
                     if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
                         LocalLog ("Removing per-VM temp folder: {0}" -f $vmTemp)
-                        Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction Stop
-                        LocalLog ("Removed per-VM temp folder: {0}" -f $vmTemp)
-                        $vmTemp = $null  # Mark as cleaned up
+                        if (Remove-DirRobust -Path $vmTemp) {
+                            LocalLog ("Removed per-VM temp folder: {0}" -f $vmTemp)
+                            $vmTemp = $null  # Mark as cleaned up
+                        } else {
+                            LocalLog ("Warning: Failed to remove per-VM temp folder using Remove-DirRobust: {0}" -f $vmTemp)
+                        }
                     }
                 } catch {
                     LocalLog ("Failed to remove per-VM temp folder {0}: {1}" -f $vmTemp, $_)
@@ -1029,8 +1069,11 @@ foreach ($vm in $vms) {
             if ($vmTemp -and (Test-Path $vmTemp)) {
                 try {
                     LocalLog ("Cleanup: Deleting temp directory {0}..." -f $vmTemp)
-                    Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction Stop
-                    LocalLog ("Cleanup: Successfully deleted temp directory: {0}" -f $vmTemp)
+                    if (Remove-DirRobust -Path $vmTemp) {
+                        LocalLog ("Cleanup: Successfully deleted temp directory: {0}" -f $vmTemp)
+                    } else {
+                        LocalLog ("Cleanup: Failed to delete temp directory using Remove-DirRobust: {0}" -f $vmTemp)
+                    }
                 } catch {
                     LocalLog ("Cleanup: Failed to delete temp directory {0}: {1}" -f $vmTemp, $_)
                 }
@@ -1042,8 +1085,11 @@ foreach ($vm in $vms) {
                     $rootContents = Get-ChildItem -Path $TempRoot -Force -ErrorAction SilentlyContinue
                     if (-not $rootContents -or $rootContents.Count -eq 0) {
                         LocalLog ("Cleanup: Temp root {0} is empty, deleting..." -f $TempRoot)
-                        Remove-Item -LiteralPath $TempRoot -Force -ErrorAction Stop
-                        LocalLog ("Cleanup: Successfully deleted empty temp root: {0}" -f $TempRoot)
+                        if (Remove-DirRobust -Path $TempRoot) {
+                            LocalLog ("Cleanup: Successfully deleted empty temp root: {0}" -f $TempRoot)
+                        } else {
+                            LocalLog ("Cleanup: Failed to delete temp root using Remove-DirRobust: {0}" -f $TempRoot)
+                        }
                     }
                 } catch {
                     LocalLog ("Cleanup: Failed to check/delete temp root {0}: {1}" -f $TempRoot, $_)

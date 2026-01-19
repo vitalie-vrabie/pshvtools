@@ -15,6 +15,11 @@
     <None Include="**\*.*" />
   </ItemGroup>
 
+  <!-- Ensure installer build depends on building the GUI shell project -->
+  <ItemGroup>
+    <ProjectReference Include="..\PSHVTools.GUI\PSHVToolsShell\PSHVToolsShell.csproj" />
+  </ItemGroup>
+
   <!-- Run the installer build script after the normal MSBuild Build target finishes.
        Using cmd /c ensures .bat files are executed correctly in all environments. -->
   <Target Name="RunInstallerScript" AfterTargets="Build">

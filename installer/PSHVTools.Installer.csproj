@@ -15,13 +15,12 @@
     <None Include="**\*.*" />
   </ItemGroup>
 
-  <Target Name="EnsureBuildScript" BeforeTargets="Build">
+  <!-- Run the installer build script after the normal MSBuild Build target finishes.
+       Using cmd /c ensures .bat files are executed correctly in all environments. -->
+  <Target Name="RunInstallerScript" AfterTargets="Build">
+    <Message Text="Running installer build script '$(BuildScript)' in $(MSBuildProjectDirectory)" Importance="high" />
     <Error Condition="!Exists('$(MSBuildProjectDirectory)\$(BuildScript)')" Text="Build script '$(BuildScript)' not found in installer folder." />
-  </Target>
-
-  <Target Name="Build" DependsOnTargets="EnsureBuildScript">
-    <Message Text="Building Inno Setup installer using $(BuildScript) in $(MSBuildProjectDirectory)" Importance="high" />
-    <Exec Command="&quot;$(MSBuildProjectDirectory)\$(BuildScript)&quot;" WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Exec Command="cmd /c &quot;\"$(MSBuildProjectDirectory)\\$(BuildScript)\&quot;&quot;" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
   <Target Name="Clean">

@@ -15,10 +15,10 @@
     <None Include="**\*.*" />
   </ItemGroup>
 
-  <!-- Ensure installer build depends on building the GUI shell project -->
-  <ItemGroup>
-    <ProjectReference Include="..\PSHVTools.GUI\PSHVToolsShell\PSHVToolsShell.csproj" />
-  </ItemGroup>
+  <!-- NOTE: Do not use a ProjectReference to a windows-specific TFM (net10.0-windows)
+       because this installer project targets net10.0 and referencing a windows-only
+       project causes MSBuild to fail. The GUI is published via the `PublishGui` target
+       below using `dotnet publish`, which avoids a direct project reference. -->
 
   <!-- Publish the GUI shell project before running the installer build script so
        the published executable is available to be included in the Inno Setup package. -->

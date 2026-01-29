@@ -92,45 +92,6 @@ param(
     [int]$ThreadCap
 )
 
-# Allow passing VM name as first raw arg (e.g. from cmd files) even if caller forgets -NamePattern
-if ([string]::IsNullOrWhiteSpace($NamePattern) -and $args.Count -ge 1 -and -not [string]::IsNullOrWhiteSpace([string]$args[0])) {
-    $NamePattern = [string]$args[0]
-}
-
-        function Remove-DirRobust {
-            param([string]$Path)
-
-            if (-not $Path) { return $false }
-
-            # Fast path
-            try { if (-not (Test-Path -LiteralPath $Path)) { return $true } } catch {}
-
-            # Try a few times with attribute reset to handle locked/readonly files
-            for ($i = 0; $i -lt 5; $i++) {
-                try {
-                    if (Test-Path -LiteralPath $Path) {
-                        # Clear read-only / hidden attributes where possible
-                        try {
-                            Get-ChildItem -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object { try { $_.Attributes = 'Archive' } catch {} }
-                        } catch {}
-
-                        Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
-                    }
-                    return $true
-                } catch {
-                    Start-Sleep -Milliseconds 250
-                }
-            }
-
-            # Fallback to cmd.exe rd which can succeed where PowerShell Remove-Item fails
-            try {
-                cmd.exe /c "rd /s /q \"$Path\"" 2>$null
-                if (-not (Test-Path -LiteralPath $Path)) { return $true }
-            } catch {}
-
-            return $false
-        }
-
 # Display help if no NamePattern provided
 if ([string]::IsNullOrWhiteSpace($NamePattern)) {
     Get-Help $MyInvocation.MyCommand.Path -Full
@@ -138,14 +99,8 @@ if ([string]::IsNullOrWhiteSpace($NamePattern)) {
 }
 
 # --- Logging ---
-function Log {
-    param([string]$Text)
-    $ts = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-    Write-Output "$ts  $Text"
-    try { [Console]::Out.Flush() } catch {}
-}
+function Log { param([string]$Text) $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss"); Write-Output "$ts  $Text" }
 
-Log ("Invoke-VMBackup starting. NamePattern='{0}', Destination='{1}', TempFolder='{2}'" -f $NamePattern, $Destination, $TempFolder)
 # --- Configuration ---
 $ShutdownTimeoutSeconds = 180
 $PollIntervalSeconds = 5
@@ -169,7 +124,6 @@ try { if (Test-Path $CancelSentinel) { Remove-Item -Path $CancelSentinel -Force 
 # Build per-date destination folder YYYYMMDD under $Destination
 $DateFolderName = (Get-Date).ToString("yyyyMMdd")
 $DateDestination = Join-Path -Path $Destination -ChildPath $DateFolderName
-Log ("Ensuring destination folder exists: {0}" -f $DateDestination)
 try {
     if (-not (Test-Path -Path $DateDestination)) {
         New-Item -Path $DateDestination -ItemType Directory -Force | Out-Null
@@ -219,15 +173,7 @@ foreach ($vm in $vms) {
 
         # Set up a trap to catch job stopping/termination
         trap {
-            $sentinelPresent = $false
-            try { $sentinelPresent = (Test-Path -LiteralPath $CancelSentinel) } catch { $sentinelPresent = $false }
-
-            if ($sentinelPresent) {
-                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Cancellation signal received for $vmName; cleaning up..."
-            } else {
-                Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Job termination detected for $vmName; initiating cleanup..."
-            }
-
+            Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Job termination detected for $vmName, initiating cleanup..."
             $script:JobCancelled = $true
             # If the job is being stopped, don't convert it into a terminating error that marks the job as Failed.
             # Let the finally/cleanup run and return a regular result object.
@@ -238,7 +184,7 @@ foreach ($vm in $vms) {
         function LocalLog { 
             param($t) 
             $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-            # Sanitize the message to avoid XML serialization errors
+            # Sanitize the message to avoid XML serialization issues
             $sanitized = $t -replace '[^\x20-\x7E\r\n\t]', '?'
             Write-Output "$ts  $sanitized"
         }
@@ -298,36 +244,6 @@ foreach ($vm in $vms) {
                     } catch {}
                 }
             } catch {
-            }
-        }
-
-        function Cleanup-CheckpointIfExists {
-            param(
-                [string]$VmName,
-                [string]$SnapshotName,
-                $SnapshotId
-            )
-
-            if (-not $SnapshotName) { return }
-
-            try {
-                $snapToRemove = $null
-                try {
-                    if ($SnapshotId) {
-                        $snapToRemove = Get-VMSnapshot -VMName $VmName -ErrorAction SilentlyContinue | Where-Object { $_.Id -eq $SnapshotId } | Select-Object -First 1
-                    }
-                } catch {}
-
-                if (-not $snapToRemove) {
-                    $snapToRemove = Get-VMSnapshot -VMName $VmName -Name $SnapshotName -ErrorAction SilentlyContinue | Select-Object -First 1
-                }
-
-                if ($snapToRemove) {
-                    LocalLog ("Removing snapshot due to aborted export: {0}" -f $SnapshotName)
-                    $snapToRemove | Remove-VMSnapshot -ErrorAction Stop
-                }
-            } catch {
-                LocalLog ("Failed to remove snapshot '{0}' after aborted export: {1}" -f $SnapshotName, $_)
             }
         }
 
@@ -451,77 +367,67 @@ foreach ($vm in $vms) {
                 $baselineVmwpPids = @()
                 try { $baselineVmwpPids = @(Get-Process -Name vmwp -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id) } catch { $baselineVmwpPids = @() }
 
-                function Invoke-ExportVmOnce {
-                    param([string]$CurrentVmName, [string]$CurrentVmTemp)
+                # Run Export-VM in a child job so we can stop it promptly on Ctrl+C cancellation
+                $exportJob = $null
+                try {
+                    $exportJob = Start-Job -ArgumentList $vmName, $vmTemp -ScriptBlock {
+                        param($n, $p)
+                        Import-Module Hyper-V -ErrorAction SilentlyContinue | Out-Null
+                        Export-VM -Name $n -Path $p -ErrorAction Stop
+                    }
 
-                    # Run Export-VM directly inside the per-VM background job.
-                    # This avoids nested Start-Job buffering/late progress rendering in the parent console.
-                    Import-Module Hyper-V -ErrorAction SilentlyContinue | Out-Null
-                    Export-VM -Name $CurrentVmName -Path $CurrentVmTemp -ErrorAction Stop
-                }
+                    while ($true) {
+                        if (IsCancelled) {
+                            LocalLog ("Cancellation detected during Export-VM, stopping export job for {0}" -f $vmName)
+                            try { Stop-Job -Job $exportJob -Force -ErrorAction SilentlyContinue } catch {}
 
-                $exportAttempt = 1
-                $maxExportAttempts = 2
-                $didTurnOffForGpuRetry = $false
+                            # Attempt to stop the underlying Hyper-V export worker as well
+                            try { Stop-ExportProcesses -VmName $vmName -BaselineVmwpPids $baselineVmwpPids -ExportRoot $vmTemp } catch {}
 
-                while ($exportAttempt -le $maxExportAttempts) {
-                    try {
-                        Invoke-ExportVmOnce -CurrentVmName $vmName -CurrentVmTemp $vmTemp
-                        break
-                    } catch {
-                        $errTxt = $_.ToString()
-                        $isGpuPartitionError = ($errTxt -match 'GPU\s*P' -or $errTxt -match 'GPU\s*partition' -or $errTxt -match 'GPUP')
-
-                        if ($exportAttempt -lt $maxExportAttempts -and $isGpuPartitionError) {
+                            # Best-effort cleanup of partial export output
                             try {
-                                $vmStateNow = (Get-VM -Name $vmName -ErrorAction SilentlyContinue).State
-                                LocalLog ("Export failed due to GPU partition assignment for {0}. Current state: {1}. Shutting down VM and retrying export..." -f $vmName, $vmStateNow)
-
-                                if ($vmStateNow -ne 'Off') {
-                                    try {
-                                        LocalLog ("Requesting VM shutdown for GPU export retry: {0}" -f $vmName)
-                                        Stop-VM -Name $vmName -Shutdown -Force -ErrorAction Stop
-
-                                        $deadline = (Get-Date).AddSeconds([int]$ShutdownTimeoutSeconds)
-                                        while ((Get-Date) -lt $deadline) {
-                                            if (IsCancelled) { break }
-                                            $s = (Get-VM -Name $vmName -ErrorAction SilentlyContinue).State
-                                            if ($s -eq 'Off') { break }
-                                            Start-Sleep -Seconds $PollIntervalSeconds
-                                        }
-
-                                        $vmStateNow = (Get-VM -Name $vmName -ErrorAction SilentlyContinue).State
-                                        if ($vmStateNow -ne 'Off') {
-                                            throw "VM did not shut down within timeout"
-                                        }
-
-                                        $vmWasTurnedOff = $true
-                                        LocalLog ("VM {0} shut down for GPU export retry" -f $vmName)
-                                    } catch {
-                                        LocalLog ("Shutdown failed or timed out for {0}; forcing power off for GPU export retry: {1}" -f $vmName, $_)
-                                        Stop-VM -Name $vmName -TurnOff -Force -ErrorAction Stop
-                                        $didTurnOffForGpuRetry = $true
-                                        $vmWasTurnedOff = $true
-                                        LocalLog ("VM {0} turned off for GPU export retry" -f $vmName)
-                                    }
+                                if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
+                                    LocalLog ("Cancellation cleanup: Removing incomplete export folder: {0}" -f $vmTemp)
+                                    Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction SilentlyContinue
                                 }
+                            } catch {}
 
-                                try {
-                                    if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
-                                        Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction SilentlyContinue
-                                    }
-                                    New-Item -Path $vmTemp -ItemType Directory -Force | Out-Null
-                                } catch {}
-
-                                $exportAttempt++
-                                continue
-                            } catch {
-                                LocalLog ("Failed to turn off {0} for GPU export retry: {1}" -f $vmName, $_)
-                                throw
-                            }
+                            $result.Success = $false
+                            $result.Message = "Export-VM cancelled by user"
+                            throw "Operation cancelled by user"
                         }
 
-                        throw
+                        if ($exportJob.State -in @('Completed','Failed','Stopped')) {
+                            break
+                        }
+
+                        Start-Sleep -Seconds 1
+                    }
+
+                    # If Export-VM was cancelled/stopped (e.g., Hyper-V Manager cancellation), treat that as a failure.
+                    if ($exportJob.State -eq 'Stopped') {
+                        LocalLog ("Export-VM job was stopped/cancelled for {0}. Cleaning up temp data and failing job." -f $vmName)
+                        try {
+                            if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
+                                Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction SilentlyContinue
+                                LocalLog ("Removed incomplete export folder: {0}" -f $vmTemp)
+                            }
+                        } catch {}
+
+                        $result.Success = $false
+                        $result.Message = "Export-VM was cancelled/stopped"
+                        throw "Export-VM was cancelled/stopped"
+                    }
+
+                    # Bubble up any errors from the export job
+                    $null = Receive-Job -Job $exportJob -ErrorAction Stop
+
+                    if ($exportJob.State -ne 'Completed') {
+                        throw "Export-VM job did not complete successfully (state: $($exportJob.State))"
+                    }
+                } finally {
+                    if ($exportJob) {
+                        try { Remove-Job -Job $exportJob -Force -ErrorAction SilentlyContinue } catch {}
                     }
                 }
 
@@ -637,10 +543,10 @@ foreach ($vm in $vms) {
                 }
 
                 LocalLog ("Creating 7z archive: {0} -> {1}" -f $vmTemp, $tempArchive)
-                # Use 7z format with default compression and multithreading
+                # Use 7z format with fast compression and multithreading
                 # Add -bsp1 to get progress percentage updates
                 $mmtArg = if ($ThreadCap -and $ThreadCap -gt 0) { "-mmt=$ThreadCap" } else { "-mmt=on" }
-                $args = @("a","-t7z",$mmtArg,"-bsp1",$tempArchive,"*")
+                $args = @("a","-t7z","-mx=1",$mmtArg,"-bsp1",$tempArchive,"*")
 
                 # Start 7z as a separate process with redirected output to capture progress
                 $proc = $null
@@ -762,12 +668,9 @@ foreach ($vm in $vms) {
             try {
                 if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
                     LocalLog ("Archive created; removing per-VM temp folder before move: {0}" -f $vmTemp)
-                    if (Remove-DirRobust -Path $vmTemp) {
-                        LocalLog ("Removed per-VM temp folder: {0}" -f $vmTemp)
-                        $vmTemp = $null
-                    } else {
-                        LocalLog ("Warning: Failed to remove per-VM temp folder using Remove-DirRobust: {0}" -f $vmTemp)
-                    }
+                    Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction Stop
+                    LocalLog ("Removed per-VM temp folder: {0}" -f $vmTemp)
+                    $vmTemp = $null
                 }
             } catch {
                 LocalLog ("Failed to remove per-VM temp folder before move {0}: {1}" -f $vmTemp, $_)
@@ -829,12 +732,9 @@ foreach ($vm in $vms) {
                 try {
                     if ($vmTemp -and (Test-Path -LiteralPath $vmTemp)) {
                         LocalLog ("Removing per-VM temp folder: {0}" -f $vmTemp)
-                        if (Remove-DirRobust -Path $vmTemp) {
-                            LocalLog ("Removed per-VM temp folder: {0}" -f $vmTemp)
-                            $vmTemp = $null  # Mark as cleaned up
-                        } else {
-                            LocalLog ("Warning: Failed to remove per-VM temp folder using Remove-DirRobust: {0}" -f $vmTemp)
-                        }
+                        Remove-Item -LiteralPath $vmTemp -Recurse -Force -ErrorAction Stop
+                        LocalLog ("Removed per-VM temp folder: {0}" -f $vmTemp)
+                        $vmTemp = $null  # Mark as cleaned up
                     }
                 } catch {
                     LocalLog ("Failed to remove per-VM temp folder {0}: {1}" -f $vmTemp, $_)
@@ -1065,34 +965,19 @@ foreach ($vm in $vms) {
 
             LocalLog ("Cleanup phase completed for {0}" -f $vmName)
             
-            # 4. Delete per-VM temp directory (folder and contents)
+            # 4. Verify and delete temp directory if empty
             if ($vmTemp -and (Test-Path $vmTemp)) {
                 try {
-                    LocalLog ("Cleanup: Deleting temp directory {0}..." -f $vmTemp)
-                    if (Remove-DirRobust -Path $vmTemp) {
-                        LocalLog ("Cleanup: Successfully deleted temp directory: {0}" -f $vmTemp)
+                    $tempContents = Get-ChildItem -Path $vmTemp -Force -ErrorAction SilentlyContinue
+                    if (-not $tempContents -or $tempContents.Count -eq 0) {
+                        LocalLog ("Cleanup: Temp directory {0} is empty, deleting..." -f $vmTemp)
+                        Remove-Item -LiteralPath $vmTemp -Force -ErrorAction Stop
+                        LocalLog ("Cleanup: Successfully deleted empty temp directory: {0}" -f $vmTemp)
                     } else {
-                        LocalLog ("Cleanup: Failed to delete temp directory using Remove-DirRobust: {0}" -f $vmTemp)
+                        LocalLog ("Cleanup: Temp directory {0} still contains {1} items, keeping it" -f $vmTemp, $tempContents.Count)
                     }
                 } catch {
-                    LocalLog ("Cleanup: Failed to delete temp directory {0}: {1}" -f $vmTemp, $_)
-                }
-            }
-
-            # 5. If the global temp root is now empty, delete it as well
-            if ($TempRoot -and (Test-Path $TempRoot)) {
-                try {
-                    $rootContents = Get-ChildItem -Path $TempRoot -Force -ErrorAction SilentlyContinue
-                    if (-not $rootContents -or $rootContents.Count -eq 0) {
-                        LocalLog ("Cleanup: Temp root {0} is empty, deleting..." -f $TempRoot)
-                        if (Remove-DirRobust -Path $TempRoot) {
-                            LocalLog ("Cleanup: Successfully deleted empty temp root: {0}" -f $TempRoot)
-                        } else {
-                            LocalLog ("Cleanup: Failed to delete temp root using Remove-DirRobust: {0}" -f $TempRoot)
-                        }
-                    }
-                } catch {
-                    LocalLog ("Cleanup: Failed to check/delete temp root {0}: {1}" -f $TempRoot, $_)
+                    LocalLog ("Cleanup: Failed to check/delete temp directory {0}: {1}" -f $vmTemp, $_)
                 }
             }
         }

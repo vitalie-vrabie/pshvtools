@@ -83,13 +83,22 @@ if ($gh) {
     if ($WhatIf) {
         Write-Short "WhatIf: gh release create $tag --title 'PSHVTools $tag' --notes-file $releaseNotesPath --assets $installer"
     } else {
-        $args = @('release','create',$tag,'--title',"PSHVTools $tag","--notes","$notes","--repo","$ownerRepo")
-        # Add assets
-        $args += '--assets'
-        $args += $installer.Path
-        if (Test-Path $checksum) { $args += $checksum }
+    # Build gh args: positional filenames (assets) come immediately after the tag
+    $args = @('release','create',$tag)
 
-        & gh @args
+    # Attach installer and checksum as positional arguments if present
+    if ($installer -and $installer.Path) { $args += $installer.Path }
+    if (Test-Path $checksum) { $args += $checksum }
+
+    # Notes: prefer file if available, otherwise pass inline notes
+    if (Test-Path $releaseNotesPath) {
+        $args += @('--title', "PSHVTools $tag", '--notes-file', $releaseNotesPath, '--repo', $ownerRepo)
+    } else {
+        $args += @('--title', "PSHVTools $tag", '--notes', $notes, '--repo', $ownerRepo)
+    }
+
+    & gh @args
+    if ($LASTEXITCODE -ne 0) { throw "gh release create failed with exit code $LASTEXITCODE" }
     }
     Write-Short "Release creation via gh complete"
     return

@@ -1,0 +1,41 @@
+name: Build Inno Setup Installer
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-installer:
+    name: Build installer (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure Chocolatey is available
+        shell: powershell
+        run: |
+          if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+            Write-Host "Installing Chocolatey..."
+            Set-ExecutionPolicy Bypass -Scope Process -Force
+            iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+          } else {
+            Write-Host "Chocolatey already present"
+          }
+
+      - name: Install Inno Setup via Chocolatey
+        shell: powershell
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer using provided script
+        run: cmd /c installer\\Build-InnoSetupInstaller.bat
+
+      - name: Upload installer artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PSHVTools-Setup
+          path: dist/PSHVTools-Setup.exe

@@ -16,7 +16,10 @@
 #>
 
 [CmdletBinding()]
-param()
+param(
+    [switch]$RunHvBak,
+    [string]$HvBakArgs = "-NamePattern '*'"
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -24,6 +27,66 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  PSHVTools Installer" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
+
+# Helper: run a PowerShell script in a child process and stream stdout/stderr live
+function Run-PowerShellScriptStream {
+    param(
+        [Parameter(Mandatory=$true)][string]$ScriptPath,
+        [Parameter(Mandatory=$false)][string]$Arguments = ''
+    )
+
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = 'powershell.exe'
+    $allArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`" $Arguments"
+    $psi.Arguments = $allArgs
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
+
+    $proc = New-Object System.Diagnostics.Process
+    $proc.StartInfo = $psi
+
+    try {
+        if (-not $proc.Start()) {
+            Write-Error "Failed to start PowerShell process for $ScriptPath"
+            return $false
+        }
+
+        # Asynchronously read output and error streams and forward to host
+        $stdOut = $proc.StandardOutput
+        $stdErr = $proc.StandardError
+
+        while (-not $proc.HasExited) {
+            while (-not $stdOut.EndOfStream) {
+                $line = $stdOut.ReadLine()
+                if ($line) { Write-Host $line }
+            }
+            while (-not $stdErr.EndOfStream) {
+                $err = $stdErr.ReadLine()
+                if ($err) { Write-Host "ERROR: $err" -ForegroundColor Red }
+            }
+            Start-Sleep -Milliseconds 100
+        }
+
+        # Drain any remaining
+        try {
+            while (-not $stdOut.EndOfStream) { $line = $stdOut.ReadLine(); if ($line) { Write-Host $line } }
+        } catch {}
+        try {
+            while (-not $stdErr.EndOfStream) { $err = $stdErr.ReadLine(); if ($err) { Write-Host "ERROR: $err" -ForegroundColor Red } }
+        } catch {}
+
+        if ($proc.ExitCode -ne 0) {
+            Write-Error "Script exited with code $($proc.ExitCode)"
+            return $false
+        }
+
+        return $true
+    } finally {
+        try { $proc.Dispose() } catch {}
+    }
+}
 
 # Get the script directory
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -123,3 +186,19 @@ Write-Host "  hvclone -SourceVmName 'BaseWin11' -NewName 'Win11-Dev01' -Destinat
 Write-Host "  hv-clone -SourceVmName 'BaseWin11' -NewName 'Win11-Dev02' -DestinationRoot 'D:\\Hyper-V'" -ForegroundColor White
 Write-Host "  fix-vhd-acl" -ForegroundColor White
 Write-Host ""
+
+# Optionally run hvbak now and stream progress
+if ($RunHvBak) {
+    Write-Host "Starting hvbak with arguments: $HvBakArgs" -ForegroundColor Cyan
+    $scriptToRun = Join-Path $ScriptsSourceDir 'hvbak.ps1'
+    if (-not (Test-Path $scriptToRun)) {
+        Write-Error "hvbak.ps1 not found at $scriptToRun"
+        exit 1
+    }
+
+    $ok = Run-PowerShellScriptStream -ScriptPath $scriptToRun -Arguments $HvBakArgs
+    if (-not $ok) {
+        Write-Error "hvbak failed or was cancelled"
+        exit 1
+    }
+}

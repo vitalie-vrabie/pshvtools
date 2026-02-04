@@ -10,6 +10,8 @@ jobs:
   build-installer:
     name: Build installer (Windows)
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -39,3 +41,26 @@ jobs:
         with:
           name: PSHVTools-Setup
           path: dist/PSHVTools-Setup.exe
+
+      - name: Mark build as stable (create/update 'stable' tag)
+        # Only create/update the stable tag for successful push builds on the default branch
+        if: ${{ github.event_name == 'push' && success() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const ref = 'refs/tags/stable';
+            const sha = process.env.GITHUB_SHA;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            try {
+              await github.rest.git.getRef({ owner, repo, ref });
+              await github.rest.git.updateRef({ owner, repo, ref, sha, force: true });
+              console.log(`Updated tag 'stable' to ${sha}`);
+            } catch (e) {
+              if (e.status === 404) {
+                await github.rest.git.createRef({ owner, repo, ref, sha });
+                console.log(`Created tag 'stable' at ${sha}`);
+              } else {
+                throw e;
+              }
+            }

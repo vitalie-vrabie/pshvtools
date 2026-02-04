@@ -5,6 +5,13 @@ on:
     branches: [ master, main ]
   pull_request:
     branches: [ master, main ]
+  # Manual dispatch to allow explicitly marking a successful build as 'stable'
+  workflow_dispatch:
+    inputs:
+      markStable:
+        description: 'Set to "true" to mark this run as stable (create/update "stable" tag)'
+        required: false
+        default: 'false'
 
 jobs:
   build-installer:
@@ -43,8 +50,9 @@ jobs:
           path: dist/PSHVTools-Setup.exe
 
       - name: Mark build as stable (create/update 'stable' tag)
-        # Only create/update the stable tag for successful push builds on the default branch
-        if: ${{ github.event_name == 'push' && success() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') }}
+        # Only create/update the stable tag when explicitly requested via workflow_dispatch
+        # Use the workflow_dispatch input `markStable: 'true'` to enable tagging for this run.
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.markStable == 'true' }}
         uses: actions/github-script@v6
         with:
           script: |

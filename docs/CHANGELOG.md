@@ -12,7 +12,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Fixed
 
-## [1.1.5] - 2026-02-04
+## [1.1.5] - 2026-02-25
 
 ### Changed
 - Version bump for release packaging.

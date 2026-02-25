@@ -9,8 +9,11 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ### Added
 
 ### Changed
+- Documentation refreshed to align command examples with current parameters.
 
 ### Fixed
+- Backup cancellation now performs cleanup reliably, including stopping run-scoped 7z processes before jobs.
+- Module exports no longer include a duplicate `Clone-VM` definition.
 
 ## [1.0.11] - 2026-01-17
 

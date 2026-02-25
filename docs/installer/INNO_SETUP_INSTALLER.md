@@ -65,7 +65,7 @@ installer\Build-InnoSetupInstaller.bat
 
 ### Interactive Installation
 
-1. Double-click `PSHVTools-Setup-1.0.5.exe`
+1. Double-click `PSHVTools-Setup.exe`
 2. Click "Next" through the wizard
 3. Review system requirements check
 4. Accept license agreement
@@ -76,12 +76,12 @@ After install, available commands include:
 - `hvbak` (backup)
 - `hvrestore` (restore from `.7z` backups)
 - `hvrecover` (recover orphaned VMs by re-registering configs)
-- `fix-vhd-acl` (repair VHD permissions)
+- `hvfixacl` (repair VHD permissions)
 
 ### Silent Installation
 
 ```cmd
-PSHVTools-Setup-1.0.5.exe /VERYSILENT /NORESTART
+PSHVTools-Setup.exe /VERYSILENT /NORESTART
 ```
 
 ## Uninstallation
@@ -111,4 +111,4 @@ PSHVTools-Setup-1.0.5.exe /VERYSILENT /NORESTART
 |------|-------------|
 | `PSHVTools-Installer.iss` | Inno Setup script |
 | `Build-InnoSetupInstaller.bat` | Build script |
-| `dist\\PSHVTools-Setup-1.0.5.exe` | Output installer |
+| `dist\\PSHVTools-Setup.exe` | Output installer |

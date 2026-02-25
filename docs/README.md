@@ -1,6 +1,6 @@
 # PSHVTools - PowerShell Hyper-V Tools
 
-**Version:** 1.1.3  
+**Version:** 1.1.4  
 **Product Name:** PSHVTools (PowerShell Hyper-V Tools)  
 **Module Name:** pshvtools  
 **License:** MIT
@@ -16,7 +16,7 @@ PSHVTools is a comprehensive PowerShell module for backing up and managing Hyper
 - **Parallel Processing**: Concurrent backup of multiple VMs for efficiency
 - **Advanced Compression**: 7-Zip integration with multithreading and low-priority processing
 - **Flexible Retention**: Configurable backup policies (1-100 copies per VM)
-- **Progress Tracking**: Real-time status with graceful cancellation support
+- **Progress Tracking**: Real-time status with graceful cancellation support (Ctrl+C cleanup)
 - **VHD Management**: Permission repair, compaction, and optimization utilities
 - **Recovery Tools**: Restore from backups and recover orphaned VMs
 - **Configuration Management**: Persistent settings and environment health checks
@@ -102,13 +102,13 @@ Show-PSHVToolsConfig
 ### Backup Operations
 ```powershell
 # Backup all VMs with defaults
-hvbak
+hvbak -NamePattern "*"
 
 # Backup specific VMs
 hvbak -NamePattern "Web*", "DB*"
 
 # Custom backup location and settings
-hvbak -NamePattern "*" -DestinationPath "E:\VMBackups" -Keep 10 -CompressionLevel 7
+hvbak -NamePattern "*" -Destination "E:\VMBackups" -KeepCount 10 -ThreadCap 4
 ```
 
 ### Maintenance Tasks
@@ -117,16 +117,16 @@ hvbak -NamePattern "*" -DestinationPath "E:\VMBackups" -Keep 10 -CompressionLeve
 hvcompact -NamePattern "*"
 
 # Fix permissions on VHD files
-hvfixacl -Path "D:\VMs\*.vhdx"
+hvfixacl -VhdFolder "D:\VMs"
 
 # Clone a VM
-hvclone -SourceVM "Template" -NewVMName "NewVM"
+hvclone -SourceVmName "Template" -NewName "NewVM" -DestinationRoot "D:\VMs"
 ```
 
 ### Recovery Operations
 ```powershell
 # Restore from backup
-hvrestore -BackupPath "D:\Backups\VM.7z"
+hvrestore -BackupPath "D:\Backups\VM.7z" -DestinationRoot "D:\VMs"
 
 # Recover orphaned VMs
 hvrecover

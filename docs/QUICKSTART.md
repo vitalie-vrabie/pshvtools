@@ -68,25 +68,22 @@ hvbak -NamePattern "*"
 hvbak -NamePattern "WebServer*"
 
 # Backup with custom settings
-hvbak -NamePattern "*" -DestinationPath "E:\Backups" -Keep 10 -CompressionLevel 5
+hvbak -NamePattern "*" -Destination "E:\Backups" -KeepCount 10 -ThreadCap 4
 ```
 
 ### 5. Maintain Your VHDs
 ```powershell
-# Compact VHD files to reclaim space (preview first)
-hvcompact -NamePattern "*" -WhatIf
-
-# Execute compaction
+# Compact VHD files to reclaim space
 hvcompact -NamePattern "*"
 
 # Fix permission issues
-hvfixacl -Path "D:\VMs\*.vhdx"
+hvfixacl -VhdFolder "D:\VMs"
 ```
 
 ### 6. Restore When Needed
 ```powershell
 # Restore from backup
-hvrestore -BackupPath "D:\Backups\WebServer.7z" -DestinationPath "D:\VMs"
+hvrestore -BackupPath "D:\Backups\WebServer.7z" -DestinationRoot "D:\VMs"
 
 # Recover orphaned VMs
 hvrecover
@@ -96,29 +93,26 @@ hvrecover
 
 ### Parallel Backups
 ```powershell
-# Backup multiple VMs concurrently (default)
-hvbak -NamePattern "*" -MaxParallel 4
+# Backup multiple VMs concurrently (default, no throttling)
+hvbak -NamePattern "*"
 ```
 
 ### Custom Compression
 ```powershell
-# High compression for archival
-hvbak -NamePattern "*" -CompressionLevel 9
-
-# Fast compression for frequent backups
-hvbak -NamePattern "*" -CompressionLevel 1
+# Cap 7-Zip threading (optional)
+hvbak -NamePattern "*" -ThreadCap 4
 ```
 
 ### VM Cloning
 ```powershell
 # Clone a VM with a new name
-hvclone -SourceVM "TemplateVM" -NewVMName "NewVM" -Path "D:\VMs"
+hvclone -SourceVmName "TemplateVM" -NewName "NewVM" -DestinationRoot "D:\VMs"
 ```
 
 ### Configuration Management
 ```powershell
 # Set comprehensive defaults
-Set-PSHVToolsConfig -DefaultBackupPath "E:\Backups" -DefaultKeepCount 5 -DefaultCompressionLevel 5 -MaxParallelBackups 3
+Set-PSHVToolsConfig -DefaultBackupPath "E:\Backups" -DefaultKeepCount 5 -CompressionThreads 4
 
 # Reset to defaults
 Reset-PSHVToolsConfig
@@ -142,11 +136,11 @@ Register-ScheduledTask -TaskName "VMBackup" -Action $action -Trigger $trigger -R
 # Backup multiple VM patterns
 hvbak -NamePattern "Prod*", "Test*"
 
-# Compact specific VHDs
-hvcompact -Path "D:\VMs\*.vhdx" -WhatIf
+# Compact all VHDs for matching VMs
+hvcompact -NamePattern "*"
 
-# Fix ACLs on multiple paths
-hvfixacl -Path "D:\VMs\*.vhd*", "E:\VMs\*.vhd*"
+# Fix ACLs using a VHD folder
+hvfixacl -VhdFolder "D:\VMs"
 ```
 
 ### Monitoring and Logging
@@ -155,7 +149,7 @@ hvfixacl -Path "D:\VMs\*.vhd*", "E:\VMs\*.vhd*"
 Get-Job | Where-Object {$_.Name -like "*VMBackup*"} | Format-Table
 
 # Check logs
-Get-Content "$env:TEMP\PSHVTools\*.log" -Tail 20
+Get-Content "$env:TEMP\hvbak\*.log" -Tail 20
 ```
 
 ## Troubleshooting Examples
@@ -178,8 +172,8 @@ choco install 7zip  # Install via Chocolatey
 # Full environment check
 hvhealth -Verbose
 
-# Test backup with dry run
-hvbak -NamePattern "TestVM" -WhatIf
+# Test backup with a single VM
+hvbak -NamePattern "TestVM"
 
 # Check VM status
 Get-VM | Where-Object {$_.Name -like "*"} | Select-Object Name, State, Status

@@ -1,13 +1,12 @@
 ---
-# Release Notes - PSHVTools v1.1.4
+# Release Notes - PSHVTools v1.1.5
 
-Release date: 2026-02-01
+Release date: 2026-02-04
 
-This release focuses on more reliable backup cancellation cleanup and refreshed documentation.
+This release bumps the version for packaging and release distribution.
 
 Highlights
-- Ctrl+C now cleans up in-progress backups more reliably and stops related 7-Zip tasks before shutting down jobs.
-- Documentation examples updated to match current command parameters and installer naming.
+- Version bump for release packaging.
 
 For full technical details, see `docs/CHANGELOG.md`.
 

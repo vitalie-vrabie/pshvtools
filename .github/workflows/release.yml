@@ -94,12 +94,16 @@ jobs:
         #    If they differ, treat as prerelease. If they match exactly, treat as stable.
         $versionJson = Get-Content version.json | ConvertFrom-Json
         $releaseVersion = $versionJson.version
+        $stableVersion = $versionJson.stableVersion
+        $releaseDate = $versionJson.releaseDate
         $tag = $env:GITHUB_REF_NAME -replace '^v', ''
 
         $isPrerelease = $false
         if ($tag -match '-') {
             $isPrerelease = $true
-        } elseif ($tag -ne $releaseVersion) {
+        } elseif ($tag -ne $stableVersion) {
+            $isPrerelease = $true
+        } elseif ($releaseDate -eq 'unknown' -or $releaseDate -eq 'TBD') {
             $isPrerelease = $true
         }
 

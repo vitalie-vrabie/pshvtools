@@ -237,6 +237,8 @@ Version is managed in the module manifest and installer script:
 8. Push: `git push && git push --tags`
 9. Publish with `installer/Publish-GitHubRelease.ps1`
 
+Note: WIP releases must not be marked stable. Keep `stableVersion` unchanged until a release is explicitly marked stable so the installer warning continues to appear.
+
 ## Getting Help
 
 - GitHub Issues: https://github.com/vitalie-vrabie/pshvtools/issues

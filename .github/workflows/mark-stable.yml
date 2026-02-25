@@ -23,6 +23,7 @@ on:
 jobs:
   mark-stable:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'release' || github.event.release.prerelease == false }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4

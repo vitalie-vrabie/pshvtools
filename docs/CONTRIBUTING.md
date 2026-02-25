@@ -46,8 +46,8 @@ Thank you for your interest in contributing to PSHVTools! This document provides
 
 1. **Naming Conventions**
    - Use PascalCase for function names: `Invoke-VMBackup`
-   - Use kebab-case for aliases: `hv-bak`, `fix-vhd-acl`
-   - Use PascalCase for parameter names: `-NamePattern`, `-DestinationPath`
+   - Use kebab-case for aliases: `hv-bak`, `hv-fixacl`
+   - Use PascalCase for parameter names: `-NamePattern`, `-Destination`
 
 2. **Code Formatting**
    - Indent with 4 spaces (no tabs)
@@ -218,33 +218,24 @@ CI and release workflows will build the GUI, create the installer, and attach th
 
 ### Version Management
 
-Version is managed in `version.json`:
+Version is managed in the module manifest and installer script:
 
-```json
-{
-  "version": "1.0.11",
-  "stableVersion": "1.0.11",
-  "releaseDate": "2026-01-17"
-}
-```
-
-Update version in `version.json`, then update:
-- `scripts/pshvtools.psd1`
-- `installer/PSHVTools-Installer.iss`
-- `CHANGELOG.md`
-- `RELEASE_NOTES.md`
+- `scripts/pshvtools.psd1` (`ModuleVersion`, `ReleaseNotes`)
+- `installer/PSHVTools-Installer.iss` (`MyAppVersion`, `MyAppLatestStableVersion`)
+- `docs/CHANGELOG.md`
+- `docs/RELEASE_NOTES.md`
 
 ### Release Process
 
-1. Update version in `version.json`
-2. Update `CHANGELOG.md`
-3. Update `RELEASE_NOTES.md`
-4. Run version consistency check: `./tests/Test-VersionConsistency.ps1`
+1. Update `scripts/pshvtools.psd1`
+2. Update `installer/PSHVTools-Installer.iss`
+3. Update `docs/CHANGELOG.md`
+4. Update `docs/RELEASE_NOTES.md`
 5. Build and test: `./build.ps1`
 6. Commit changes: `git commit -m "chore: bump version to X.Y.Z"`
 7. Create tag: `git tag -a vX.Y.Z -m "Release X.Y.Z"`
 8. Push: `git push && git push --tags`
-9. GitHub Actions will create release automatically
+9. Publish with `installer/Publish-GitHubRelease.ps1`
 
 ## Getting Help
 

@@ -252,10 +252,10 @@ Write-Host "Running as Admin: $isAdmin"
 **Solution:**
 ```powershell
 # Run VHD ACL repair utility
-fix-vhd-acl
+hvfixacl -VhdFolder "D:\VMs"
 
-# Or specify VM pattern
-fix-vhd-acl -NamePattern "MyVM*"
+# Or use a CSV list of VHDs
+hvfixacl -VhdListCsv "C:\temp\vhds.csv"
 
 # Manual repair
 $vhd = "C:\VMs\MyVM\disk.vhdx"

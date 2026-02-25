@@ -9,6 +9,12 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ### Added
 
 ### Changed
+
+### Fixed
+
+## [1.1.4] - 2026-02-01
+
+### Changed
 - Documentation refreshed to align command examples with current parameters.
 
 ### Fixed

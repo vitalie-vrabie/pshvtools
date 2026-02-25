@@ -91,7 +91,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'PSHVTools v1.0.11 - Added hvcompact (VHD compaction), hvfixacl (VHD ACL repair), and standardized alias naming with hv-* hyphenated forms'
+    ReleaseNotes = 'PSHVTools v1.1.4 - Improved backup cancellation cleanup, fixed Clone-VM export duplication, and refreshed documentation.'
 
     } # End of PSData hashtable
 

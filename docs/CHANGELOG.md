@@ -12,12 +12,12 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Fixed
 
-## [1.1.5] - 2026-02-25
+## [1.1.5] - TBD
 
 ### Changed
 - Version bump for release packaging.
 
-## [1.1.4] - 2026-02-01
+## [1.1.4] - 2026-02-25
 
 ### Changed
 - Documentation refreshed to align command examples with current parameters.

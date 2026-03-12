@@ -14,7 +14,7 @@ PSHVTools is a comprehensive PowerShell module for backing up and managing Hyper
 ### Key Features
 - **Live VM Backups**: Production checkpoint-based backups with zero downtime
 - **Parallel Processing**: Concurrent backup of multiple VMs for efficiency
-- **Advanced Compression**: 7-Zip integration with multithreading and low-priority processing
+- **Advanced Compression**: 7-Zip integration with solid archives, multithreading, and low-priority processing
 - **Flexible Retention**: Configurable backup policies (1-100 copies per VM)
 - **Progress Tracking**: Real-time status with graceful cancellation support (Ctrl+C cleanup)
 - **VHD Management**: Permission repair, compaction, and optimization utilities

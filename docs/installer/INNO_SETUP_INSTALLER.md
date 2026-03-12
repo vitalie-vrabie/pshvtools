@@ -3,6 +3,7 @@
 ## Overview
 
 PSHVTools includes a professional GUI wizard installer built with Inno Setup. This creates a native Windows EXE installer with a modern wizard interface.
+Backups created with `hvbak` use solid 7-Zip archives by default for improved compression efficiency.
 
 **Supported installation method:** the Inno Setup EXE installer.
 

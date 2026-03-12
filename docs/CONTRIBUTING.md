@@ -225,6 +225,8 @@ Version is managed in the module manifest and installer script:
 - `docs/CHANGELOG.md`
 - `docs/RELEASE_NOTES.md`
 
+Document notable backup compression changes (such as solid 7-Zip archives) in the changelog and release notes.
+
 ### Release Process
 
 1. Update `scripts/pshvtools.psd1`

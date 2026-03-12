@@ -103,6 +103,8 @@ hvbak -NamePattern "*"
 hvbak -NamePattern "*" -ThreadCap 4
 ```
 
+Backups use solid 7-Zip archives by default for better compression.
+
 ### VM Cloning
 ```powershell
 # Clone a VM with a new name

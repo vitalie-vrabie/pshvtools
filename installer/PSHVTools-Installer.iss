@@ -7,7 +7,7 @@
 #define MyAppVersion "1.1.5"
 #endif
 #ifndef MyAppLatestStableVersion
-#define MyAppLatestStableVersion "1.1.4"
+#define MyAppLatestStableVersion "1.1.5"
 #endif
 
 #define MyAppPublisher "Vitalie Vrabie"

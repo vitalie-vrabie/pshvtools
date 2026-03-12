@@ -109,6 +109,8 @@ Write-Host "Running as Admin: $isAdmin"
    Test-Path $7zPath
    ```
 
+    `hvbak` uses solid 7-Zip archives by default. If compression is slow, try lowering `-ThreadCap` to reduce CPU usage.
+
 3. **Check disk space for temp files:**
    ```powershell
    Get-PSDrive | Where-Object { $_.Used -ne $null }

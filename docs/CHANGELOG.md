@@ -12,10 +12,11 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Fixed
 
-## [1.1.5] - TBD
+## [1.1.5] - 2026-03-12
 
 ### Changed
 - Version bump for release packaging.
+- `hvbak` now creates solid 7-Zip archives by default for better compression efficiency.
 
 ## [1.1.4] - 2026-02-25
 

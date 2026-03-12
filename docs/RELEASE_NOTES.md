@@ -1,13 +1,12 @@
 ---
-# Release Notes - PSHVTools v1.1.5
+# Release Notes - PSHVTools v1.1.6
 
-Release date: 2026-03-12
+Release date: TBD
 
-This release marks 1.1.5 as the current stable build and enables solid 7-Zip archives for `hvbak` backups.
+This release bumps the version for upcoming updates.
 
 Highlights
-- `hvbak` now creates solid 7-Zip archives by default for improved compression efficiency.
-- Version bump for release packaging.
+- Version bump for upcoming release.
 
 For full technical details, see `docs/CHANGELOG.md`.
 

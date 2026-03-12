@@ -12,6 +12,11 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Fixed
 
+## [1.1.6] - TBD
+
+### Changed
+- Version bump for upcoming release.
+
 ## [1.1.5] - 2026-03-12
 
 ### Changed

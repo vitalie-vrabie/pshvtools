@@ -39,7 +39,6 @@ param(
     [string]$SourceVmName,
 
     [Parameter(Mandatory = $false, Position = 1)]
-    [ValidateNotNullOrEmpty()]
     [string]$NewName,
 
     [Parameter(Mandatory = $false)]
@@ -103,11 +102,10 @@ if ([string]::IsNullOrWhiteSpace($DestinationRoot) -and -not [string]::IsNullOrW
 
     if ($looksLikePath) {
         $DestinationRoot = $NewName
-        $NewName = $null
     }
 }
 
-if (-not [string]::IsNullOrWhiteSpace($DestinationRoot) -and [string]::IsNullOrWhiteSpace($NewName)) {
+if (-not [string]::IsNullOrWhiteSpace($DestinationRoot)) {
     $NewName = Split-Path -Path $DestinationRoot -Leaf
     $DestinationRoot = Split-Path -Path $DestinationRoot -Parent
 }

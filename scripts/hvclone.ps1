@@ -145,6 +145,32 @@ if (-not (Test-Path -LiteralPath $destVmRoot)) {
     New-Item -Path $destVmRoot -ItemType Directory -Force | Out-Null
 }
 
+$vmConfigBase = $destVmRoot
+$destinationQualifier = Split-Path -Path $DestinationRoot -Qualifier
+if (-not [string]::IsNullOrWhiteSpace($destinationQualifier)) {
+    $driveLetter = $destinationQualifier.TrimEnd('\').TrimEnd(':')
+    try {
+        $volume = Get-Volume -DriveLetter $driveLetter -ErrorAction Stop
+        if ($volume.FileSystem -eq 'ReFS') {
+            $vmHost = Get-VMHost -ErrorAction Stop
+            if ($vmHost.VirtualMachinePath) {
+                $vmConfigBase = $vmHost.VirtualMachinePath
+                Write-Warning "VM configuration will be placed under '$vmConfigBase' because ReFS destinations are not supported for VM configuration files."
+            }
+        }
+    } catch {}
+}
+
+$vmConfigRoot = Join-Path -Path $vmConfigBase -ChildPath 'Virtual Machines'
+$vmVhdRoot = Join-Path -Path $destVmRoot -ChildPath 'Virtual Hard Disks'
+$vmSnapshotRoot = Join-Path -Path $vmConfigBase -ChildPath 'Snapshots'
+
+foreach ($path in @($vmConfigRoot, $vmVhdRoot, $vmSnapshotRoot)) {
+    if (-not (Test-Path -LiteralPath $path)) {
+        New-Item -Path $path -ItemType Directory -Force | Out-Null
+    }
+}
+
 $safeSrcName = $SourceVmName -replace '[\\/:*?\"<>|]', '_'
 $exportRoot = Join-Path -Path $TempFolder -ChildPath ("{0}_{1}" -f $safeSrcName, (Get-Date).ToString('yyyyMMddHHmmss'))
 if (Test-Path -LiteralPath $exportRoot) {
@@ -168,7 +194,21 @@ try {
         throw "Unable to locate exported VM folder under '$exportRoot'."
     }
 
-    $importedVm = Import-VM -Path $exportVmRoot -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -VirtualMachinePath $destVmRoot -SnapshotFilePath $destVmRoot -ErrorAction Stop
+    $vmcxPath = $null
+    try {
+        $vmcx = Get-ChildItem -Path $exportVmRoot -Recurse -Filter *.vmcx -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($vmcx) {
+            $vmcxPath = $vmcx.FullName
+        }
+    } catch {}
+
+    $importPath = if ($vmcxPath) { $vmcxPath } else { $exportVmRoot }
+
+    $importedVm = Import-VM -Path $importPath -Copy -GenerateNewId -NewName $NewName -ErrorAction Stop
+
+    if ($importedVm -and -not [string]::IsNullOrWhiteSpace($DestinationRoot)) {
+        Move-VMStorage -VM $importedVm -DestinationStoragePath $destVmRoot -ErrorAction Stop
+    }
 
     if ($importedVm) {
         Rename-VM -VM $importedVm -NewName $NewName -ErrorAction Stop

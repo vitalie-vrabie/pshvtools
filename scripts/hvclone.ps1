@@ -59,6 +59,12 @@ param(
 
 Set-StrictMode -Version Latest
 
+function Log {
+    param([string]$Message)
+    $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+    Write-Output "$timestamp  $Message"
+}
+
 function Resolve-UncPathIfMapped {
     param(
         [Parameter(Mandatory = $true)]
@@ -118,6 +124,8 @@ if ($SourceVmName -eq $NewName) {
     throw "NewName must be different from SourceVmName."
 }
 
+Log "hvclone starting. Source='$SourceVmName', NewName='$NewName', DestinationRoot='$DestinationRoot', TempFolder='$TempFolder'"
+
 $src = Get-VM -Name $SourceVmName -ErrorAction Stop
 
 if ([string]::IsNullOrWhiteSpace($DestinationRoot)) {
@@ -166,7 +174,9 @@ if ($existing -and -not $Force) {
 
 if ($existing -and $Force) {
     try {
+        Log "Removing existing VM '$NewName'"
         if ($existing.State -ne 'Off') {
+            Log "Stopping existing VM '$NewName'"
             Stop-VM -VM $existing -TurnOff -Force -ErrorAction SilentlyContinue
         }
     } catch {}
@@ -176,20 +186,24 @@ if ($existing -and $Force) {
 
 $destVmRoot = Join-Path -Path $DestinationRoot -ChildPath $NewName
 if (-not (Test-Path -LiteralPath $destVmRoot)) {
+    Log "Creating destination folder '$destVmRoot'"
     New-Item -Path $destVmRoot -ItemType Directory -Force | Out-Null
 }
 
 $safeSrcName = $SourceVmName -replace '[\\/:*?\"<>|]', '_'
 $exportRoot = Join-Path -Path $TempFolder -ChildPath ("{0}_{1}" -f $safeSrcName, (Get-Date).ToString('yyyyMMddHHmmss'))
 if (Test-Path -LiteralPath $exportRoot) {
+    Log "Removing existing export folder '$exportRoot'"
     Remove-Item -LiteralPath $exportRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
+Log "Creating export folder '$exportRoot'"
 New-Item -Path $exportRoot -ItemType Directory -Force | Out-Null
 
 $importedVm = $null
 $sourceRenamed = $false
 $tempSourceName = $null
 try {
+    Log "Exporting VM '$SourceVmName'"
     Export-VM -VM $src -Path $exportRoot -ErrorAction Stop
 
     $exportVmRoot = Join-Path -Path $exportRoot -ChildPath $SourceVmName
@@ -203,6 +217,8 @@ try {
     if (-not (Test-Path -LiteralPath $exportVmRoot)) {
         throw "Unable to locate exported VM folder under '$exportRoot'."
     }
+
+    Log "Temporarily renaming source VM to avoid name collision"
 
     $tempSourceName = "{0}_hvclone_{1}" -f $SourceVmName, (Get-Date -Format 'yyyyMMddHHmmss')
     while (Get-VM -Name $tempSourceName -ErrorAction SilentlyContinue) {
@@ -226,18 +242,22 @@ try {
 
     $importPath = if ($vmcxPath) { $vmcxPath } else { $exportVmRoot }
 
+    Log "Importing VM from '$importPath'"
     $importedVm = Import-VM -Path $importPath -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -ErrorAction Stop
 
     if ($importedVm) {
+        Log "Renaming imported VM to '$NewName'"
         Rename-VM -VM $importedVm -NewName $NewName -ErrorAction Stop
     }
 
     if ($importedVm) {
+        Log "Clone completed: '$NewName'"
         $importedVm | Get-VM
     }
 } finally {
     if ($sourceRenamed -and $tempSourceName) {
         try {
+            Log "Restoring source VM name to '$SourceVmName'"
             Rename-VM -Name $tempSourceName -NewName $SourceVmName -ErrorAction Stop
         } catch {
             Write-Warning "Failed to restore source VM name '$SourceVmName' from '$tempSourceName'. $_"
@@ -245,6 +265,7 @@ try {
     }
     try {
         if (Test-Path -LiteralPath $exportRoot) {
+            Log "Cleaning up export folder '$exportRoot'"
             Remove-Item -LiteralPath $exportRoot -Recurse -Force -ErrorAction SilentlyContinue
         }
     } catch {}

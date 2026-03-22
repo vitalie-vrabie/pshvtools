@@ -94,6 +94,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 # Define source files
 $SourceFiles = @(
     'hvbak.ps1',
+    'hvclone.ps1',
     'pshvtools.psm1',
     'pshvtools.psd1',
     'fix-vhd-acl.ps1',

@@ -166,11 +166,11 @@ function Clone-VM {
         [ValidateNotNullOrEmpty()]
         [string]$NewName,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [string]$DestinationRoot,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, Position = 2)]
         [ValidateNotNullOrEmpty()]
         [string]$TempFolder = "$env:TEMP\\hvclone",
 
@@ -178,67 +178,27 @@ function Clone-VM {
         [switch]$Force
     )
 
-    Set-StrictMode -Version Latest
-
-    try {
-        Import-Module Hyper-V -ErrorAction Stop | Out-Null
-    } catch {
-        throw "Hyper-V module is required. Run on a Hyper-V host with the Hyper-V PowerShell module installed. $_"
+    if ($PSBoundParameters.Count -eq 0) {
+        Get-Help Clone-VM -Full
+        return
     }
 
-    if ($SourceVmName -eq $NewName) {
-        throw "NewName must be different from SourceVmName."
+    $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath 'hvclone.ps1'
+    if (-not (Test-Path -LiteralPath $scriptPath)) {
+        Write-Error "hvclone.ps1 not found at: $scriptPath"
+        return
     }
 
-    $src = Get-VM -Name $SourceVmName -ErrorAction Stop
-
-    $existing = Get-VM -Name $NewName -ErrorAction SilentlyContinue
-    if ($existing -and -not $Force) {
-        throw "A VM named '$NewName' already exists. Use -Force to remove it before cloning."
+    $params = @{
+        SourceVmName = $SourceVmName
+        NewName = $NewName
+        TempFolder = $TempFolder
     }
 
-    if ($existing -and $Force) {
-        try {
-            if ($existing.State -ne 'Off') {
-                Stop-VM -VM $existing -TurnOff -Force -ErrorAction SilentlyContinue
-            }
-        } catch {}
+    if ($PSBoundParameters.ContainsKey('DestinationRoot')) { $params.DestinationRoot = $DestinationRoot }
+    if ($Force.IsPresent) { $params.Force = $true }
 
-        Remove-VM -VM $existing -Force -ErrorAction Stop
-    }
-
-    $destVmRoot = Join-Path -Path $DestinationRoot -ChildPath $NewName
-    if (-not (Test-Path -LiteralPath $destVmRoot)) {
-        New-Item -Path $destVmRoot -ItemType Directory -Force | Out-Null
-    }
-
-    $safeSrcName = $SourceVmName -replace '[\\/:*?\"<>|]', '_'
-    $exportRoot = Join-Path -Path $TempFolder -ChildPath ("{0}_{1}" -f $safeSrcName, (Get-Date).ToString('yyyyMMddHHmmss'))
-    if (Test-Path -LiteralPath $exportRoot) {
-        Remove-Item -LiteralPath $exportRoot -Recurse -Force -ErrorAction SilentlyContinue
-    }
-    New-Item -Path $exportRoot -ItemType Directory -Force | Out-Null
-
-    $importedVm = $null
-    try {
-        Export-VM -VM $src -Path $exportRoot -ErrorAction Stop
-
-        $importedVm = Import-VM -Path $exportRoot -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -VirtualMachinePath $destVmRoot -SnapshotFilePath $destVmRoot -ErrorAction Stop
-
-        if ($importedVm) {
-            Rename-VM -VM $importedVm -NewName $NewName -ErrorAction Stop
-        }
-
-        if ($importedVm) {
-            $importedVm | Get-VM
-        }
-    } finally {
-        try {
-            if (Test-Path -LiteralPath $exportRoot) {
-                Remove-Item -LiteralPath $exportRoot -Recurse -Force -ErrorAction SilentlyContinue
-            }
-        } catch {}
-    }
+    & $scriptPath @params
 }
 
 function Repair-VhdAcl {

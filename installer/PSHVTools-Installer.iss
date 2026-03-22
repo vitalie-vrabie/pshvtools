@@ -80,6 +80,7 @@ english.ModuleInstall=Installing PowerShell module...
 [Files]
 ; Module files - install to PowerShell modules directory
 Source: "..\scripts\hvbak.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
+Source: "..\scripts\hvclone.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
 Source: "..\scripts\hvcompact.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
 Source: "..\scripts\hvfixacl.ps1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"
 Source: "..\scripts\pshvtools.psm1"; DestDir: "{commonpf64}\WindowsPowerShell\Modules\pshvtools"

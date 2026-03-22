@@ -121,6 +121,9 @@ hvfixacl -VhdFolder "D:\VMs"
 
 # Clone a VM
 hvclone -SourceVmName "Template" -NewName "NewVM" -DestinationRoot "D:\VMs"
+
+# Clone with destination folder (name derived from folder)
+hvclone "Template" "D:\VMs\NewVM" "E:\hvclone-temp"
 ```
 
 ### Recovery Operations

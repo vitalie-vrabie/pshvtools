@@ -109,6 +109,9 @@ Backups use solid 7-Zip archives by default for better compression.
 ```powershell
 # Clone a VM with a new name
 hvclone -SourceVmName "TemplateVM" -NewName "NewVM" -DestinationRoot "D:\VMs"
+
+# Clone with destination folder (name derived from folder)
+hvclone "TemplateVM" "D:\VMs\NewVM" "E:\hvclone-temp"
 ```
 
 ### Configuration Management

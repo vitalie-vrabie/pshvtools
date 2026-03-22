@@ -242,11 +242,11 @@ try {
 
     $importPath = if ($vmcxPath) { $vmcxPath } else { $exportVmRoot }
 
-    $vmConfigRoot = Join-Path -Path $destVmRoot -ChildPath 'Virtual Machines'
+    $vmConfigRoot = $destVmRoot
     $vmSnapshotRoot = Join-Path -Path $destVmRoot -ChildPath 'Snapshots'
     $vmVhdRoot = Join-Path -Path $destVmRoot -ChildPath 'Virtual Hard Disks'
 
-    foreach ($path in @($vmConfigRoot, $vmSnapshotRoot, $vmVhdRoot)) {
+    foreach ($path in @($vmSnapshotRoot, $vmVhdRoot)) {
         if (-not (Test-Path -LiteralPath $path)) {
             New-Item -Path $path -ItemType Directory -Force | Out-Null
         }

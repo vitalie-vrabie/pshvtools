@@ -145,32 +145,6 @@ if (-not (Test-Path -LiteralPath $destVmRoot)) {
     New-Item -Path $destVmRoot -ItemType Directory -Force | Out-Null
 }
 
-$vmConfigBase = $destVmRoot
-$destinationQualifier = Split-Path -Path $DestinationRoot -Qualifier
-if (-not [string]::IsNullOrWhiteSpace($destinationQualifier)) {
-    $driveLetter = $destinationQualifier.TrimEnd('\').TrimEnd(':')
-    try {
-        $volume = Get-Volume -DriveLetter $driveLetter -ErrorAction Stop
-        if ($volume.FileSystem -eq 'ReFS') {
-            $vmHost = Get-VMHost -ErrorAction Stop
-            if ($vmHost.VirtualMachinePath) {
-                $vmConfigBase = $vmHost.VirtualMachinePath
-                Write-Warning "VM configuration will be placed under '$vmConfigBase' because ReFS destinations are not supported for VM configuration files."
-            }
-        }
-    } catch {}
-}
-
-$vmConfigRoot = Join-Path -Path $vmConfigBase -ChildPath 'Virtual Machines'
-$vmVhdRoot = Join-Path -Path $destVmRoot -ChildPath 'Virtual Hard Disks'
-$vmSnapshotRoot = Join-Path -Path $vmConfigBase -ChildPath 'Snapshots'
-
-foreach ($path in @($vmConfigRoot, $vmVhdRoot, $vmSnapshotRoot)) {
-    if (-not (Test-Path -LiteralPath $path)) {
-        New-Item -Path $path -ItemType Directory -Force | Out-Null
-    }
-}
-
 $safeSrcName = $SourceVmName -replace '[\\/:*?\"<>|]', '_'
 $exportRoot = Join-Path -Path $TempFolder -ChildPath ("{0}_{1}" -f $safeSrcName, (Get-Date).ToString('yyyyMMddHHmmss'))
 if (Test-Path -LiteralPath $exportRoot) {
@@ -179,6 +153,8 @@ if (Test-Path -LiteralPath $exportRoot) {
 New-Item -Path $exportRoot -ItemType Directory -Force | Out-Null
 
 $importedVm = $null
+$sourceRenamed = $false
+$tempSourceName = $null
 try {
     Export-VM -VM $src -Path $exportRoot -ErrorAction Stop
 
@@ -194,6 +170,18 @@ try {
         throw "Unable to locate exported VM folder under '$exportRoot'."
     }
 
+    $tempSourceName = "{0}_hvclone_{1}" -f $SourceVmName, (Get-Date -Format 'yyyyMMddHHmmss')
+    while (Get-VM -Name $tempSourceName -ErrorAction SilentlyContinue) {
+        $tempSourceName = "{0}_hvclone_{1}" -f $SourceVmName, (Get-Date -Format 'yyyyMMddHHmmssffff')
+    }
+
+    try {
+        Rename-VM -VM $src -NewName $tempSourceName -ErrorAction Stop
+        $sourceRenamed = $true
+    } catch {
+        throw "Failed to temporarily rename source VM '$SourceVmName' to '$tempSourceName'. $_"
+    }
+
     $vmcxPath = $null
     try {
         $vmcx = Get-ChildItem -Path $exportVmRoot -Recurse -Filter *.vmcx -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -204,7 +192,7 @@ try {
 
     $importPath = if ($vmcxPath) { $vmcxPath } else { $exportVmRoot }
 
-    $importedVm = Import-VM -Path $importPath -Copy -GenerateNewId -NewName $NewName -ErrorAction Stop
+    $importedVm = Import-VM -Path $importPath -Copy -GenerateNewId -ErrorAction Stop
 
     if ($importedVm -and -not [string]::IsNullOrWhiteSpace($DestinationRoot)) {
         Move-VMStorage -VM $importedVm -DestinationStoragePath $destVmRoot -ErrorAction Stop
@@ -218,6 +206,13 @@ try {
         $importedVm | Get-VM
     }
 } finally {
+    if ($sourceRenamed -and $tempSourceName) {
+        try {
+            Rename-VM -Name $tempSourceName -NewName $SourceVmName -ErrorAction Stop
+        } catch {
+            Write-Warning "Failed to restore source VM name '$SourceVmName' from '$tempSourceName'. $_"
+        }
+    }
     try {
         if (Test-Path -LiteralPath $exportRoot) {
             Remove-Item -LiteralPath $exportRoot -Recurse -Force -ErrorAction SilentlyContinue

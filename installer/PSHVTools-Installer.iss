@@ -12,7 +12,7 @@
 
 #define MyAppPublisher "Vitalie Vrabie"
 #define MyAppURL "https://github.com/vitalie-vrabie/pshvtools"
-#define MyAppDescription "PowerShell Hyper-V Tools - VM Backup Utilities"
+#define MyAppDescription "PowerShell Hyper-V Tools - VM Management Utilities"
 
 [Setup]
 ; Basic application information

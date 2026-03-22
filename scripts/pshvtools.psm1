@@ -141,10 +141,11 @@ function Clone-VM {
       Name of the existing VM to clone.
 
     .PARAMETER NewName
-      Name of the new cloned VM.
+      Name of the new cloned VM. If omitted, the name is derived from the last segment of DestinationRoot.
 
     .PARAMETER DestinationRoot
-      Folder where the new VM files will be stored.
+      Folder where the new VM files will be stored. When NewName is omitted, DestinationRoot can point
+      directly to the new VM folder (the VM name is taken from the folder name).
 
     .PARAMETER VmRoot
       Folder containing all VMs. The new VM will be created under VmRoot\<NewName>.
@@ -165,7 +166,7 @@ function Clone-VM {
         [ValidateNotNullOrEmpty()]
         [string]$SourceVmName,
 
-        [Parameter(Mandatory = $true, Position = 1)]
+        [Parameter(Mandatory = $false, Position = 1)]
         [ValidateNotNullOrEmpty()]
         [string]$NewName,
 

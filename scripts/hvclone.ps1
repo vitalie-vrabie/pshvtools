@@ -10,11 +10,11 @@
   Name of the existing VM to clone.
 
 .PARAMETER NewName
-  Name of the new cloned VM.
+  Name of the new cloned VM. If omitted, the name is derived from the last segment of DestinationRoot.
 
 .PARAMETER DestinationRoot
-  Folder where the new VM files will be stored. Defaults to the Hyper-V host VirtualMachinePath
-  when not specified.
+  Folder where the new VM files will be stored. When NewName is omitted, DestinationRoot can point
+  directly to the new VM folder (the VM name is taken from the folder name).
 
 .PARAMETER VmRoot
   Folder containing all VMs. The new VM will be created under VmRoot\<NewName>.
@@ -38,7 +38,7 @@ param(
     [ValidateNotNullOrEmpty()]
     [string]$SourceVmName,
 
-    [Parameter(Mandatory = $true, Position = 1)]
+    [Parameter(Mandatory = $false, Position = 1)]
     [ValidateNotNullOrEmpty()]
     [string]$NewName,
 
@@ -89,6 +89,15 @@ try {
     Import-Module Hyper-V -ErrorAction Stop | Out-Null
 } catch {
     throw "Hyper-V module is required. Run on a Hyper-V host with the Hyper-V PowerShell module installed. $_"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($DestinationRoot) -and [string]::IsNullOrWhiteSpace($NewName)) {
+    $NewName = Split-Path -Path $DestinationRoot -Leaf
+    $DestinationRoot = Split-Path -Path $DestinationRoot -Parent
+}
+
+if ([string]::IsNullOrWhiteSpace($NewName)) {
+    throw "NewName is required. Provide -NewName or use a DestinationRoot that includes the new VM folder name."
 }
 
 if ($SourceVmName -eq $NewName) {

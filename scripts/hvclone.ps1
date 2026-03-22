@@ -226,11 +226,7 @@ try {
 
     $importPath = if ($vmcxPath) { $vmcxPath } else { $exportVmRoot }
 
-    $importedVm = Import-VM -Path $importPath -Copy -GenerateNewId -ErrorAction Stop
-
-    if ($importedVm -and -not [string]::IsNullOrWhiteSpace($DestinationRoot)) {
-        Move-VMStorage -VM $importedVm -DestinationStoragePath $destVmRoot -ErrorAction Stop
-    }
+    $importedVm = Import-VM -Path $importPath -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -ErrorAction Stop
 
     if ($importedVm) {
         Rename-VM -VM $importedVm -NewName $NewName -ErrorAction Stop

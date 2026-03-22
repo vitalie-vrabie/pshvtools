@@ -16,6 +16,9 @@
   Folder where the new VM files will be stored. Defaults to the Hyper-V host VirtualMachinePath
   when not specified.
 
+.PARAMETER VmRoot
+  Folder containing all VMs. The new VM will be created under VmRoot\<NewName>.
+
 .PARAMETER TempFolder
   Temporary folder used for the Hyper-V export step.
 
@@ -42,6 +45,10 @@ param(
     [Parameter(Mandatory = $false)]
     [ValidateNotNullOrEmpty()]
     [string]$DestinationRoot,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateNotNullOrEmpty()]
+    [string]$VmRoot,
 
     [Parameter(Mandatory = $false, Position = 2)]
     [ValidateNotNullOrEmpty()]
@@ -113,6 +120,10 @@ if ([string]::IsNullOrWhiteSpace($DestinationRoot)) {
     }
 
     $DestinationRoot = $defaultRoot
+}
+
+if (-not [string]::IsNullOrWhiteSpace($VmRoot)) {
+    $DestinationRoot = $VmRoot
 }
 
 if (-not [string]::IsNullOrWhiteSpace($DestinationRoot)) {

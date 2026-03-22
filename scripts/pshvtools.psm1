@@ -146,6 +146,9 @@ function Clone-VM {
     .PARAMETER DestinationRoot
       Folder where the new VM files will be stored.
 
+    .PARAMETER VmRoot
+      Folder containing all VMs. The new VM will be created under VmRoot\<NewName>.
+
     .PARAMETER TempFolder
       Temporary folder used for the Hyper-V export step.
 
@@ -169,6 +172,10 @@ function Clone-VM {
         [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [string]$DestinationRoot,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$VmRoot,
 
         [Parameter(Mandatory = $false, Position = 2)]
         [ValidateNotNullOrEmpty()]
@@ -196,6 +203,7 @@ function Clone-VM {
     }
 
     if ($PSBoundParameters.ContainsKey('DestinationRoot')) { $params.DestinationRoot = $DestinationRoot }
+    if ($PSBoundParameters.ContainsKey('VmRoot')) { $params.VmRoot = $VmRoot }
     if ($Force.IsPresent) { $params.Force = $true }
 
     & $scriptPath @params

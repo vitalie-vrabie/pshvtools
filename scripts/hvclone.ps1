@@ -242,8 +242,18 @@ try {
 
     $importPath = if ($vmcxPath) { $vmcxPath } else { $exportVmRoot }
 
+    $vmConfigRoot = Join-Path -Path $destVmRoot -ChildPath 'Virtual Machines'
+    $vmSnapshotRoot = Join-Path -Path $destVmRoot -ChildPath 'Snapshots'
+    $vmVhdRoot = Join-Path -Path $destVmRoot -ChildPath 'Virtual Hard Disks'
+
+    foreach ($path in @($vmConfigRoot, $vmSnapshotRoot, $vmVhdRoot)) {
+        if (-not (Test-Path -LiteralPath $path)) {
+            New-Item -Path $path -ItemType Directory -Force | Out-Null
+        }
+    }
+
     Log "Importing VM from '$importPath'"
-    $importedVm = Import-VM -Path $importPath -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -ErrorAction Stop
+    $importedVm = Import-VM -Path $importPath -Copy -GenerateNewId -VhdDestinationPath $vmVhdRoot -VirtualMachinePath $vmConfigRoot -SnapshotFilePath $vmSnapshotRoot -ErrorAction Stop
 
     if ($importedVm) {
         Log "Renaming imported VM to '$NewName'"

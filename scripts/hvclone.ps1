@@ -156,7 +156,19 @@ $importedVm = $null
 try {
     Export-VM -VM $src -Path $exportRoot -ErrorAction Stop
 
-    $importedVm = Import-VM -Path $exportRoot -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -VirtualMachinePath $destVmRoot -SnapshotFilePath $destVmRoot -ErrorAction Stop
+    $exportVmRoot = Join-Path -Path $exportRoot -ChildPath $SourceVmName
+    if (-not (Test-Path -LiteralPath $exportVmRoot)) {
+        $exportChildren = Get-ChildItem -Path $exportRoot -Directory -ErrorAction SilentlyContinue
+        if ($exportChildren -and $exportChildren.Count -eq 1) {
+            $exportVmRoot = $exportChildren[0].FullName
+        }
+    }
+
+    if (-not (Test-Path -LiteralPath $exportVmRoot)) {
+        throw "Unable to locate exported VM folder under '$exportRoot'."
+    }
+
+    $importedVm = Import-VM -Path $exportVmRoot -Copy -GenerateNewId -VhdDestinationPath $destVmRoot -VirtualMachinePath $destVmRoot -SnapshotFilePath $destVmRoot -ErrorAction Stop
 
     if ($importedVm) {
         Rename-VM -VM $importedVm -NewName $NewName -ErrorAction Stop

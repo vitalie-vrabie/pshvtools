@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       markStable:
-        description: 'Set to "true" to mark this run as stable (create/update "stable" tag)'
+        description: 'Set to "true" to mark this run as stable (create/update "stable" tag). Keep false for WIP builds.'
         required: false
         default: 'false'
 

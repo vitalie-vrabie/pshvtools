@@ -37,4 +37,9 @@ hvclone -SourceVmName 'BaseWin11' -NewName 'Win11-Dev03' -DestinationRoot 'D:\Hy
 # 5) Destination folder syntax (name derived from folder)
 hvclone 'BaseWin11' 'D:\Hyper-V\Win11-Dev04' 'E:\hvclone-temp'
 
+# Resulting layout:
+# D:\Hyper-V\Win11-Dev04\ (VM config)
+# D:\Hyper-V\Win11-Dev04\Virtual Hard Disks\ (VHDs)
+# D:\Hyper-V\Win11-Dev04\Snapshots\ (checkpoints)
+
 

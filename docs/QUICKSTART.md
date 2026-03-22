@@ -112,6 +112,11 @@ hvclone -SourceVmName "TemplateVM" -NewName "NewVM" -DestinationRoot "D:\VMs"
 
 # Clone with destination folder (name derived from folder)
 hvclone "TemplateVM" "D:\VMs\NewVM" "E:\hvclone-temp"
+
+# Resulting layout
+# D:\VMs\NewVM\ (VM config)
+# D:\VMs\NewVM\Virtual Hard Disks\ (VHDs)
+# D:\VMs\NewVM\Snapshots\ (checkpoints)
 ```
 
 ### Configuration Management

@@ -91,6 +91,22 @@ try {
     throw "Hyper-V module is required. Run on a Hyper-V host with the Hyper-V PowerShell module installed. $_"
 }
 
+if ([string]::IsNullOrWhiteSpace($DestinationRoot) -and -not [string]::IsNullOrWhiteSpace($NewName)) {
+    $looksLikePath = $false
+    try {
+        if ([System.IO.Path]::IsPathRooted($NewName)) {
+            $looksLikePath = $true
+        } elseif ($NewName -match '[\\/]') {
+            $looksLikePath = $true
+        }
+    } catch {}
+
+    if ($looksLikePath) {
+        $DestinationRoot = $NewName
+        $NewName = $null
+    }
+}
+
 if (-not [string]::IsNullOrWhiteSpace($DestinationRoot) -and [string]::IsNullOrWhiteSpace($NewName)) {
     $NewName = Split-Path -Path $DestinationRoot -Leaf
     $DestinationRoot = Split-Path -Path $DestinationRoot -Parent

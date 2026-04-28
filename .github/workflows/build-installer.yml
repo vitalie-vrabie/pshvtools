@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       markStable:
-        description: 'Set to "true" to mark this run as stable (create/update "stable" tag). Keep false for WIP builds.'
+        description: 'Set to "true" to mark this run as stable (create/update "stable" tag). Keep false for WIP builds. Update docs/RELEASE_NOTES.md before releasing.'
         required: false
         default: 'false'
 
@@ -41,6 +41,10 @@ jobs:
 
       - name: Build installer using provided script
         run: cmd /c installer\\Build-InnoSetupInstaller.bat
+
+      - name: Reminder: update release notes before releasing
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: echo Ensure docs/RELEASE_NOTES.md is up to date before creating a release.
 
       - name: Upload installer artifact
         if: always()

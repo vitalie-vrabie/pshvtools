@@ -8,7 +8,7 @@
 RootModule = 'pshvtools.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1.6'
+ModuleVersion = '1.1.7'
 
 # ID used to uniquely identify this module
 GUID = 'a3c5e8f1-9d4b-4a2c-b6e7-8f3d9c1a5b2e'
@@ -91,7 +91,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-    ReleaseNotes = 'PSHVTools v1.1.6 - Version bump for upcoming release.'
+    ReleaseNotes = 'PSHVTools v1.1.7 - Version bump for upcoming release.'
 
     } # End of PSData hashtable
 

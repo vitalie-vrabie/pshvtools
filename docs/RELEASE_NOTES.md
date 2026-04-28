@@ -1,5 +1,5 @@
 ---
-# Release Notes - PSHVTools v1.1.6
+# Release Notes - PSHVTools v1.1.7
 
 Release date: TBD
 

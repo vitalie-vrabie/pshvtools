@@ -1,7 +1,7 @@
 ---
 # Release Notes - PSHVTools v1.1.7
 
-Release date: 2026-03-22
+Release date: 2026-05-01
 
 This release marks PSHVTools v1.1.7 as the latest stable build.
 

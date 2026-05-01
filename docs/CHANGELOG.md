@@ -12,7 +12,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Fixed
 
-## [1.1.7] - 2026-03-22
+## [1.1.7] - 2026-05-01
 
 ### Changed
 - Marked 1.1.7 as the latest stable release.

@@ -11,6 +11,7 @@ Backups created with `hvbak` use solid 7-Zip archives by default for improved co
 
 - **Inno Setup 6** (for building the installer)
 - **PowerShell 5.1+** (runtime)
+- **.NET 10 runtime** (Desktop or Core; runtime)
 - **7-Zip** (runtime; `7z.exe` in PATH or standard install location)
 
 ### Installing Inno Setup (build requirement)
@@ -55,6 +56,7 @@ installer\Build-InnoSetupInstaller.bat
 - **PowerShell Version Check:** Validates PowerShell 5.1+
 - **Hyper-V Detection:** Checks for Hyper-V availability (recommended)
 - **7-Zip Detection:** Checks for `7z.exe` (required)
+- **.NET Runtime Detection:** Checks for .NET 10 Desktop or Core runtime
 
 ### Installation Features
 - Installs module to: `C:\Program Files\WindowsPowerShell\Modules\pshvtools\`

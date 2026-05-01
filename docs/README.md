@@ -1,6 +1,6 @@
 # PSHVTools - PowerShell Hyper-V Tools
 
-**Version:** 1.1.6  
+**Version:** 1.1.7  
 **Product Name:** PSHVTools (PowerShell Hyper-V Tools)  
 **Module Name:** pshvtools  
 **License:** MIT
@@ -55,6 +55,7 @@ PSHVTools-Setup.exe /VERYSILENT /NORESTART
 
 - Windows 10/11 or Windows Server 2016+
 - PowerShell 5.1 or later
+- .NET 10 runtime (Desktop or Core)
 - Hyper-V role enabled (recommended)
 - 7-Zip installed (will be detected automatically)
 

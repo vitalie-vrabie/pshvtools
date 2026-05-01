@@ -12,10 +12,11 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Fixed
 
-## [1.1.7] - TBD
+## [1.1.7] - 2026-03-22
 
 ### Changed
-- Version bump for upcoming release.
+- Marked 1.1.7 as the latest stable release.
+- Documentation updated for .NET 10 runtime requirements.
 
 ## [1.1.6] - 2026-03-22
 

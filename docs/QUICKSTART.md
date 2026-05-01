@@ -49,6 +49,7 @@ hvhealth
 ```
 
 This verifies PowerShell, Hyper-V, and 7-Zip are properly configured.
+It also checks that the .NET 10 runtime is available for the GUI installer.
 
 ### 3. Configure Defaults (Optional)
 ```powershell

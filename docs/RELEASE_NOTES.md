@@ -1,12 +1,13 @@
 ---
 # Release Notes - PSHVTools v1.1.7
 
-Release date: TBD
+Release date: 2026-03-22
 
-This release bumps the version for upcoming updates.
+This release marks PSHVTools v1.1.7 as the latest stable build.
 
 Highlights
-- Version bump for upcoming release.
+- Marked 1.1.7 as the latest stable release.
+- Documentation refreshed for .NET 10 runtime requirements.
 
 For full technical details, see `docs/CHANGELOG.md`.
 
